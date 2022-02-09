@@ -905,6 +905,12 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         return transferAmount;
     }
 
+    function sendViaCall(address payable _to, uint amount) private {
+        (bool sent, bytes memory data) = _to.call{value: amount}("");
+        data;
+        require(sent, "Failed to send Ether");
+    }
+
     function swap() private lockTheSwap {
         uint256 totalFee = _teamFeeCollected.add(_marketingFeeCollected);
 
@@ -928,10 +934,10 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         uint256 amountFee = address(this).balance.sub(balanceBefore);
         
         uint256 amountMarketing = amountFee.mul(_marketingFeeCollected).div(totalFee);
-        if(amountMarketing > 0) payable(marketingWallet).transfer(amountMarketing);
+        if(amountMarketing > 0) sendViaCall(payable(marketingWallet), amountMarketing);
 
         uint256 amountTeam = address(this).balance;
-        if(amountTeam > 0) payable(teamWallet).transfer(address(this).balance);
+        if(amountTeam > 0) sendViaCall(payable(teamWallet), address(this).balance);
         
         _marketingFeeCollected = 0;
         _teamFeeCollected = 0;
