@@ -740,17 +740,17 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         _reflectionBalance[msg.sender] = _reflectionTotal;
         emit Transfer(address(0),msg.sender, _tokenTotal);
 
-        _marketingFee.push(1250);
-        _marketingFee.push(5000);
-        _marketingFee.push(5000);
+        _marketingFee.push(1000);
+        _marketingFee.push(0);
+        _marketingFee.push(0);
 
-        _teamFee.push(1250);
-        _teamFee.push(5000);
-        _teamFee.push(5000);
+        _teamFee.push(0);
+        _teamFee.push(500);
+        _teamFee.push(0);
 
-        _LPFee.push(1250);
-        _LPFee.push(5000);
-        _LPFee.push(5000);
+        _LPFee.push(1000);
+        _LPFee.push(0);
+        _LPFee.push(0);
     }
 
     function name() public view returns (string memory) {
