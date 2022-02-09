@@ -1002,5 +1002,11 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         blacklist[account] = isBlacklisted;
     }
 
+    function multiBlacklist(address[] memory addresses, bool _bool) external onlyOwner {
+        for (uint256 i = 0;i < addresses.length; i++){
+            blacklist[addresses[i]] = _bool;
+        }
+    }
+
     receive() external payable {}
 }
