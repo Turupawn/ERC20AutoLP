@@ -699,7 +699,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     uint256 internal _teamFeeCollected;
     uint256 internal _LPFeeCollected;
 
-    bool public isFeeActive = false; // should be true
+    bool public isFeeActive = true; // should be true
     bool private inSwap;
     bool public swapEnabled = true;
 
@@ -724,12 +724,12 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     }
 
     constructor() public {
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff);
         pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
         router = _uniswapV2Router;
-        marketingWallet = 0x96067820B26B74749a9A9Ba8Ea6ba25d2F71f57D;
-        teamWallet = 0x28ab2B2a091fb82bF4D8078e143A39125Bc6cf4F;
-        LPWallet = 0x28ab2B2a091fb82bF4D8078e143A39125Bc6cf4F;
+        marketingWallet = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
+        teamWallet = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
+        LPWallet = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
         
         isTaxless[msg.sender] = true;
         isTaxless[marketingWallet] = true;
@@ -740,8 +740,8 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         excludeAccount(address(pair));
         excludeAccount(address(this));
         excludeAccount(address(marketingWallet));
-        excludeAccount(address(teamWallet));
-        excludeAccount(address(LPWallet));
+        //excludeAccount(address(teamWallet));
+        //excludeAccount(address(LPWallet));
         excludeAccount(address(address(0)));
         excludeAccount(address(address(0x000000000000000000000000000000000000dEaD)));
         
@@ -880,7 +880,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         require(!blacklist[sender] && !blacklist[recipient], "sender or recipient is blacklisted!");
 
         if (swapEnabled && !inSwap && sender != pair) {
-            swap();
+            //swap();
         }
 
         uint256 transferAmount = amount;
@@ -906,11 +906,19 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     }
 
     function calculateFee(uint256 feeIndex, uint256 amount) internal returns(uint256, uint256) {
+        /*
+        uint256 taxFee = amount.mul(_taxFee[feeIndex]).div(10**(_feeDecimal + 2));
+        uint256 marketingFee = amount.mul(_marketingFee[feeIndex]).div(10**(_feeDecimal + 2));
+        uint256 teamFee = amount.mul(_teamFee[feeIndex]).div(10**(_feeDecimal + 2));
+        uint256 LPFee = amount.mul(_LPFee[feeIndex]).div(10**(_feeDecimal + 2));
+        */
+
         uint256 taxFee = amount.mul(_taxFee[feeIndex]).div(10**(_feeDecimal + 2));
         uint256 marketingFee = amount.mul(_marketingFee[feeIndex]).div(10**(_feeDecimal + 2));
         uint256 teamFee = amount.mul(_teamFee[feeIndex]).div(10**(_feeDecimal + 2));
         uint256 LPFee = amount.mul(_LPFee[feeIndex]).div(10**(_feeDecimal + 2));
         
+
         _marketingFeeCollected = _marketingFeeCollected.add(marketingFee);
         _teamFeeCollected = _teamFeeCollected.add(teamFee);
         _LPFeeCollected = _LPFeeCollected.add(LPFee);
@@ -927,6 +935,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         uint256 transferAmount = amount;
 
         (uint256 taxFee, uint256 otherFee) = calculateFee(p2p ? 2 : sell ? 1 : 0, amount);
+        
         if(otherFee != 0) 
         {
             transferAmount = transferAmount.sub(otherFee);
@@ -936,10 +945,12 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
             }
             emit Transfer(account, address(this), otherFee);
         }
+        /**/
         if(taxFee != 0){
             _reflectionTotal = _reflectionTotal.sub(taxFee.mul(rate));
         }
-        _feeTotal = _feeTotal.add(taxFee).add(otherFee);
+        /**/
+        //_feeTotal = _feeTotal.add(taxFee).add(otherFee);
         return transferAmount;
     }
 

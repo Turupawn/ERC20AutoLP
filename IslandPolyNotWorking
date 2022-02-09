@@ -1,12 +1,9 @@
 /**
- *Submitted for verification at Etherscan.io on 2022-01-15
-*/
-
-/**
- *Submitted for verification at Etherscan.io on 2021-12-26
+ *Submitted for verification at Etherscan.io on 2021-10-25
 */
 
 // SPDX-License-Identifier: MIT
+// @dev Telegram: defi_guru
 pragma solidity ^0.6.0;
 
 /*
@@ -664,13 +661,18 @@ interface IPinkAntiBot {
   ) external;
 }
 
-contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
+interface ITopHolderRewardDistributor {
+    function depositReward(uint256 amount) external;
+    function onTransfer(address sender, address recipient, uint256 amount) external;
+}
+
+contract IslandInu is Context, IERC20, Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using Address for address;
     using TransferHelper for address;
 
-    string private _name = 'GhostCap';
-    string private _symbol = 'GHOST';
+    string private _name = 'IslandInu';
+    string private _symbol = 'ISLAINU';
     uint8 private _decimals = 9;
 
     mapping(address => uint256) internal _reflectionBalance;
@@ -678,43 +680,37 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     mapping(address => mapping(address => uint256)) internal _allowances;
 
     uint256 private constant MAX = ~uint256(0);
-    uint256 internal _tokenTotal = 1_000_000_000_000e9;
+    uint256 internal _tokenTotal = 100_000_000_000e9;
     uint256 internal _reflectionTotal = (MAX - (MAX % _tokenTotal));
 
     mapping(address => bool) public isTaxless;
     mapping(address => bool) internal _isExcluded;
     address[] internal _excluded;
 
-    mapping(address => bool) public blacklist;
-
     uint256 public _feeDecimal = 2;
     // index 0 = buy fee, index 1 = sell fee, index 2 = p2p fee
     uint256[] public _taxFee;
-    uint256[] public _marketingFee;
     uint256[] public _teamFee;
-    uint256[] public _LPFee;
+    uint256[] public _marketingFee;
 
     uint256 internal _feeTotal;
     uint256 internal _marketingFeeCollected;
     uint256 internal _teamFeeCollected;
-    uint256 internal _LPFeeCollected;
 
-    bool public isFeeActive = false; // should be true
+    bool public isFeeActive = true; // should be true
     bool private inSwap;
     bool public swapEnabled = true;
 
-    uint256 public maxWalletAmount = _tokenTotal.mul(1000).div(1000); // 0.5%
+    uint256 public maxTxAmount = _tokenTotal.mul(5).div(1000); // 0.5%
     uint256 public minTokensBeforeSwap = 1_000_000e9;
 
     address public marketingWallet;
     address public teamWallet;
-    address public LPWallet;
 
     IUniswapV2Router02 public router;
     address public pair;
 
     event SwapUpdated(bool enabled);
-    event AutoLiquify(uint256 amountETH, uint256 amountBOG);
     event Swap(uint256 swaped, uint256 recieved);
 
     modifier lockTheSwap() {
@@ -724,45 +720,47 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     }
 
     constructor() public {
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+
+        address _router = 0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff;
+        address _owner = 0x730bF3B67090511A64ABA060FbD2F7903536321E;
+        address _marketingWallet = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
+        address _teamWallet = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
+
+
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(_router);
         pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
         router = _uniswapV2Router;
-        marketingWallet = 0x96067820B26B74749a9A9Ba8Ea6ba25d2F71f57D;
-        teamWallet = 0x28ab2B2a091fb82bF4D8078e143A39125Bc6cf4F;
-        LPWallet = 0x28ab2B2a091fb82bF4D8078e143A39125Bc6cf4F;
+        marketingWallet = _marketingWallet;
+        teamWallet = _teamWallet;
         
-        isTaxless[msg.sender] = true;
-        isTaxless[marketingWallet] = true;
+        isTaxless[_owner] = true;
         isTaxless[teamWallet] = true;
-        isTaxless[LPWallet] = true;
+        isTaxless[marketingWallet] = true;
         isTaxless[address(this)] = true;
 
         excludeAccount(address(pair));
         excludeAccount(address(this));
         excludeAccount(address(marketingWallet));
         excludeAccount(address(teamWallet));
-        excludeAccount(address(LPWallet));
         excludeAccount(address(address(0)));
         excludeAccount(address(address(0x000000000000000000000000000000000000dEaD)));
-        
-        _reflectionBalance[msg.sender] = _reflectionTotal;
-        emit Transfer(address(0),msg.sender, _tokenTotal);
 
-        _taxFee.push(0);
-        _taxFee.push(2000);
-        _taxFee.push(0);
+        _reflectionBalance[_owner] = _reflectionTotal;
+        emit Transfer(address(0),_owner, _tokenTotal);
 
-        _marketingFee.push(1000);
-        _marketingFee.push(0);
-        _marketingFee.push(0);
+        _taxFee.push(200);
+        _taxFee.push(200);
+        _taxFee.push(200);
 
-        _teamFee.push(0);
-        _teamFee.push(500);
-        _teamFee.push(0);
+        _teamFee.push(200);
+        _teamFee.push(200);
+        _teamFee.push(200);
 
-        _LPFee.push(1000);
-        _LPFee.push(0);
-        _LPFee.push(0);
+        _marketingFee.push(200);
+        _marketingFee.push(200);
+        _marketingFee.push(200);
+
+        transferOwnership(_owner);
     }
 
     function name() public view returns (string memory) {
@@ -846,12 +844,25 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
 
     function excludeAccount(address account) public onlyOwner {
         require(account != address(router), 'ERC20: We can not exclude Uniswap router.');
-        require(!_isExcluded[account], 'ERC20: Account is already excluded');
+        //require(!_isExcluded[account], 'ERC20: Account is already excluded');
         if (_reflectionBalance[account] > 0) {
             _tokenBalance[account] = tokenFromReflection(_reflectionBalance[account]);
         }
         _isExcluded[account] = true;
         _excluded.push(account);
+    }
+
+    function includeAccount(address account) external onlyOwner {
+        require(_isExcluded[account], 'ERC20: Account is already included');
+        for (uint256 i = 0; i < _excluded.length; i++) {
+            if (_excluded[i] == account) {
+                _excluded[i] = _excluded[_excluded.length - 1];
+                _tokenBalance[account] = 0;
+                _isExcluded[account] = false;
+                _excluded.pop();
+                break;
+            }
+        }
     }
 
     function _approve(
@@ -875,9 +886,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         require(recipient != address(0), 'ERC20: transfer to the zero address');
         require(amount > 0, 'Transfer amount must be greater than zero');
 
-        require(isTaxless[sender] || isTaxless[recipient] || recipient == pair || balanceOf(recipient).add(amount) <= maxWalletAmount, 'Max Wallet Limit Exceeds!');
-
-        require(!blacklist[sender] && !blacklist[recipient], "sender or recipient is blacklisted!");
+        require(isTaxless[sender] || isTaxless[recipient] || amount <= maxTxAmount, 'Max Transfer Limit Exceeds!');
 
         if (swapEnabled && !inSwap && sender != pair) {
             swap();
@@ -909,12 +918,10 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         uint256 taxFee = amount.mul(_taxFee[feeIndex]).div(10**(_feeDecimal + 2));
         uint256 marketingFee = amount.mul(_marketingFee[feeIndex]).div(10**(_feeDecimal + 2));
         uint256 teamFee = amount.mul(_teamFee[feeIndex]).div(10**(_feeDecimal + 2));
-        uint256 LPFee = amount.mul(_LPFee[feeIndex]).div(10**(_feeDecimal + 2));
         
         _marketingFeeCollected = _marketingFeeCollected.add(marketingFee);
         _teamFeeCollected = _teamFeeCollected.add(teamFee);
-        _LPFeeCollected = _LPFeeCollected.add(LPFee);
-        return (taxFee, marketingFee.add(teamFee).add(LPFee));
+        return (taxFee, marketingFee.add(teamFee));
     }
 
     function collectFee(
@@ -943,30 +950,20 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         return transferAmount;
     }
 
-    function sendViaCall(address payable _to, uint amount) private {
-        (bool sent, bytes memory data) = _to.call{value: amount}("");
-        data;
-        require(sent, "Failed to send Ether");
-    }
-
     function swap() private lockTheSwap {
-        // How much are we swaping?
-        uint256 totalFee = _teamFeeCollected.add(_marketingFeeCollected).add(_LPFeeCollected);
-        uint256 halfLPFee = _LPFeeCollected.div(2);
-        uint256 amountToSwap = halfLPFee.add(_marketingFeeCollected).add(_teamFeeCollected);
+        uint256 totalFee = _teamFeeCollected.add(_marketingFeeCollected);
 
         if(minTokensBeforeSwap > totalFee) return;
 
-        // Let's swap for eth now
         address[] memory sellPath = new address[](2);
         sellPath[0] = address(this);
         sellPath[1] = router.WETH();       
 
         uint256 balanceBefore = address(this).balance;
 
-        _approve(address(this), address(router), amountToSwap);
+        _approve(address(this), address(router), totalFee);
         router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            amountToSwap,
+            totalFee,
             0,
             sellPath,
             address(this),
@@ -975,35 +972,16 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
 
         uint256 amountFee = address(this).balance.sub(balanceBefore);
         
-        // Send to marketing
-        uint256 amountMarketing = amountFee.mul(_marketingFeeCollected).div(amountToSwap);
-        if(amountMarketing > 0) sendViaCall(payable(marketingWallet), amountMarketing);
+        uint256 amountMarketing = amountFee.mul(_marketingFeeCollected).div(totalFee);
+        if(amountMarketing > 0) payable(marketingWallet).transfer(amountMarketing);
 
-        // Send to team
-        uint256 amountTeam = amountFee.mul(_teamFeeCollected).div(amountToSwap);
-        if(amountTeam > 0) sendViaCall(payable(teamWallet), amountTeam);
-
-        // Send to LP
-        uint256 amountETHLiquidity = address(this).balance;
-        uint256 amountToLiquify = _LPFeeCollected.sub(halfLPFee);
-
-        if(amountToLiquify > 0){
-            router.addLiquidityETH{value: amountETHLiquidity}(
-                address(this),
-                amountToLiquify,
-                0,
-                0,
-                LPWallet,
-                block.timestamp
-            );
-            emit AutoLiquify(amountETHLiquidity, amountToLiquify);
-        }
+        uint256 amountTeam = address(this).balance;
+        if(amountTeam > 0) payable(marketingWallet).transfer(address(this).balance);
         
         _marketingFeeCollected = 0;
         _teamFeeCollected = 0;
-        _LPFeeCollected = 0;
 
-        emit Swap(amountToSwap, amountFee);
+        emit Swap(totalFee, amountFee);
     }
 
     function _getReflectionRate() private view returns (uint256) {
@@ -1019,7 +997,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         return reflectionSupply.div(tokenSupply);
     }
 
-    function setPairAndRouter(address _pair, IUniswapV2Router02 _router) external onlyOwner {
+    function setPairRouterRewardToken(address _pair, IUniswapV2Router02 _router) external onlyOwner {
         pair = _pair;
         router = _router;
     }
@@ -1043,16 +1021,11 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         _taxFee[2] = p2p;
     }
 
+
     function setTeamFee(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
         _teamFee[0] = buy;
         _teamFee[1] = sell;
         _teamFee[2] = p2p;
-    }
-
-    function setLPFee(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
-        _LPFee[0] = buy;
-        _LPFee[1] = sell;
-        _LPFee[2] = p2p;
     }
 
     function setMarketingFee(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
@@ -1069,26 +1042,12 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         teamWallet = wallet;
     }
 
-    function setLPWallet(address wallet)  external onlyOwner {
-        LPWallet = wallet;
-    }
-
-    function setMaxWalletAmount(uint256 percentage) external onlyOwner {
-        maxWalletAmount = _tokenTotal.mul(percentage).div(10000);
+    function setMaxTxAmount(uint256 percentage) external onlyOwner {
+        maxTxAmount = _tokenTotal.mul(percentage).div(10000);
     }
 
     function setMinTokensBeforeSwap(uint256 amount) external onlyOwner {
         minTokensBeforeSwap = amount;
-    }
-
-    function setBlacklist(address account, bool isBlacklisted) external onlyOwner {
-        blacklist[account] = isBlacklisted;
-    }
-
-    function multiBlacklist(address[] memory addresses, bool _bool) external onlyOwner {
-        for (uint256 i = 0;i < addresses.length; i++){
-            blacklist[addresses[i]] = _bool;
-        }
     }
 
     receive() external payable {}
