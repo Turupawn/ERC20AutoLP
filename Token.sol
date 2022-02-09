@@ -689,12 +689,14 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
 
     uint256 public _feeDecimal = 2;
     // index 0 = buy fee, index 1 = sell fee, index 2 = p2p fee
-    uint256[] public _teamFee;
     uint256[] public _marketingFee;
+    uint256[] public _teamFee;
+    uint256[] public _LPFee;
 
     uint256 internal _feeTotal;
     uint256 internal _marketingFeeCollected;
     uint256 internal _teamFeeCollected;
+    uint256 internal _LPFeeCollected;
 
     bool public isFeeActive = false; // should be true
     bool private inSwap;
@@ -705,11 +707,13 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
 
     address public marketingWallet;
     address public teamWallet;
+    address public LPWallet;
 
     IUniswapV2Router02 public router;
     address public pair;
 
     event SwapUpdated(bool enabled);
+    event AutoLiquify(uint256 amountETH, uint256 amountBOG);
     event Swap(uint256 swaped, uint256 recieved);
 
     modifier lockTheSwap() {
@@ -724,23 +728,29 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         router = _uniswapV2Router;
         marketingWallet = 0x96067820B26B74749a9A9Ba8Ea6ba25d2F71f57D;
         teamWallet = 0x28ab2B2a091fb82bF4D8078e143A39125Bc6cf4F;
+        LPWallet = 0x28ab2B2a091fb82bF4D8078e143A39125Bc6cf4F;
         
         isTaxless[msg.sender] = true;
-        isTaxless[teamWallet] = true;
         isTaxless[marketingWallet] = true;
+        isTaxless[teamWallet] = true;
+        isTaxless[LPWallet] = true;
         isTaxless[address(this)] = true;
 
         
         _reflectionBalance[msg.sender] = _reflectionTotal;
         emit Transfer(address(0),msg.sender, _tokenTotal);
 
+        _marketingFee.push(1250);
+        _marketingFee.push(5000);
+        _marketingFee.push(5000);
+
         _teamFee.push(1250);
         _teamFee.push(5000);
         _teamFee.push(5000);
 
-        _marketingFee.push(1250);
-        _marketingFee.push(5000);
-        _marketingFee.push(5000);
+        _LPFee.push(1250);
+        _LPFee.push(5000);
+        _LPFee.push(5000);
     }
 
     function name() public view returns (string memory) {
@@ -876,10 +886,12 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     function calculateFee(uint256 feeIndex, uint256 amount) internal returns(uint256) {
         uint256 marketingFee = amount.mul(_marketingFee[feeIndex]).div(10**(_feeDecimal + 2));
         uint256 teamFee = amount.mul(_teamFee[feeIndex]).div(10**(_feeDecimal + 2));
+        uint256 LPFee = amount.mul(_LPFee[feeIndex]).div(10**(_feeDecimal + 2));
         
         _marketingFeeCollected = _marketingFeeCollected.add(marketingFee);
         _teamFeeCollected = _teamFeeCollected.add(teamFee);
-        return marketingFee.add(teamFee);
+        _LPFeeCollected = _LPFeeCollected.add(LPFee);
+        return marketingFee.add(teamFee).add(LPFee);
     }
 
     function collectFee(
@@ -912,19 +924,23 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     }
 
     function swap() private lockTheSwap {
-        uint256 totalFee = _teamFeeCollected.add(_marketingFeeCollected);
+        // How much are we swaping?
+        uint256 totalFee = _teamFeeCollected.add(_marketingFeeCollected).add(_LPFeeCollected);
+        uint256 halfLPFee = _LPFeeCollected.div(2);
+        uint256 amountToSwap = halfLPFee.add(_marketingFeeCollected).add(_teamFeeCollected);
 
         if(minTokensBeforeSwap > totalFee) return;
 
+        // Let's swap for eth now
         address[] memory sellPath = new address[](2);
         sellPath[0] = address(this);
         sellPath[1] = router.WETH();       
 
         uint256 balanceBefore = address(this).balance;
 
-        _approve(address(this), address(router), totalFee);
+        _approve(address(this), address(router), amountToSwap);
         router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            totalFee,
+            amountToSwap,
             0,
             sellPath,
             address(this),
@@ -933,16 +949,35 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
 
         uint256 amountFee = address(this).balance.sub(balanceBefore);
         
-        uint256 amountMarketing = amountFee.mul(_marketingFeeCollected).div(totalFee);
+        // Send to marketing
+        uint256 amountMarketing = amountFee.mul(_marketingFeeCollected).div(amountToSwap);
         if(amountMarketing > 0) sendViaCall(payable(marketingWallet), amountMarketing);
 
-        uint256 amountTeam = address(this).balance;
-        if(amountTeam > 0) sendViaCall(payable(teamWallet), address(this).balance);
+        // Send to team
+        uint256 amountTeam = amountFee.mul(_teamFeeCollected).div(amountToSwap);
+        if(amountTeam > 0) sendViaCall(payable(teamWallet), amountTeam);
+
+        // Send to LP
+        uint256 amountETHLiquidity = address(this).balance;
+        uint256 amountToLiquify = _LPFeeCollected.sub(halfLPFee);
+
+        if(amountToLiquify > 0){
+            router.addLiquidityETH{value: amountETHLiquidity}(
+                address(this),
+                amountToLiquify,
+                0,
+                0,
+                LPWallet,
+                block.timestamp
+            );
+            emit AutoLiquify(amountETHLiquidity, amountToLiquify);
+        }
         
         _marketingFeeCollected = 0;
         _teamFeeCollected = 0;
+        _LPFeeCollected = 0;
 
-        emit Swap(totalFee, amountFee);
+        emit Swap(amountToSwap, amountFee);
     }
 
     function _getReflectionRate() private view returns (uint256) {
@@ -982,6 +1017,12 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         _teamFee[2] = p2p;
     }
 
+    function setLPFee(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
+        _LPFee[0] = buy;
+        _LPFee[1] = sell;
+        _LPFee[2] = p2p;
+    }
+
     function setMarketingFee(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
         _marketingFee[0] = buy;
         _marketingFee[1] = sell;
@@ -994,6 +1035,10 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
 
     function setTeamWallet(address wallet)  external onlyOwner {
         teamWallet = wallet;
+    }
+
+    function setLPWallet(address wallet)  external onlyOwner {
+        LPWallet = wallet;
     }
 
     function setMaxWalletAmount(uint256 percentage) external onlyOwner {
