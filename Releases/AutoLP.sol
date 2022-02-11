@@ -699,7 +699,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     uint256 internal _teamFeeCollected;
     uint256 internal _LPFeeCollected;
 
-    bool public isFeeActive = false; // should be true
+    bool public isFeeActive = true;
     bool private inSwap;
     bool public swapEnabled = true;
 
