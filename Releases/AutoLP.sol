@@ -678,7 +678,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     mapping(address => mapping(address => uint256)) internal _allowances;
 
     uint256 private constant MAX = ~uint256(0);
-    uint256 internal _tokenTotal = 1_000_000_000_000e9;
+    uint256 internal _tokenTotal = 1_000_000_000_000_000e9;
     uint256 internal _reflectionTotal = (MAX - (MAX % _tokenTotal));
 
     mapping(address => bool) public isTaxless;
