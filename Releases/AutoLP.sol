@@ -846,7 +846,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
 
     function excludeAccount(address account) public onlyOwner {
         require(account != address(router), 'ERC20: We can not exclude Uniswap router.');
-        require(!_isExcluded[account], 'ERC20: Account is already excluded');
+        //require(!_isExcluded[account], 'ERC20: Account is already excluded');
         if (_reflectionBalance[account] > 0) {
             _tokenBalance[account] = tokenFromReflection(_reflectionBalance[account]);
         }
@@ -988,6 +988,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         uint256 amountToLiquify = _LPFeeCollected.sub(halfLPFee);
 
         if(amountToLiquify > 0){
+            _approve(address(this), address(router), amountToLiquify);
             router.addLiquidityETH{value: amountETHLiquidity}(
                 address(this),
                 amountToLiquify,
