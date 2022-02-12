@@ -296,25 +296,35 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
      * construction.
      */
     constructor() {
-        _name = "My Token";
-        _symbol = "TKN";
+        // Editable
+        string e_name = "Name";
+        string e_symbol = "SYM";
+        address e_buyWallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
+        address e_sellWallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
+        uint e_minTokensBeforeSwap = 1_000_000 ether;
+        uint256 e_totalSupply = 1_000_000_000 ether;
+        uint256 e_buyFee = 1000; //10.00%
+        uint256 e_sellFee = 1000; //10.00%
+        // End editable
+        
+        _name = e_name;
+        _symbol = e_symbol;
 
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
         router = _uniswapV2Router;
 
-        buyWallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
-        sellWallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
+        buyWallet = e_buyWallet;
+        sellWallet = e_sellWallet;
 
-        //minTokensBeforeSwap = 1_000_000e9;
-        minTokensBeforeSwap = 0.1 ether;
+        minTokensBeforeSwap = e_minTokensBeforeSwap;
 
-        _buyFee.push(1000);
+        _buyFee.push(e_buyFee);
         _buyFee.push(0);
         _buyFee.push(0);
 
         _sellFee.push(0);
-        _sellFee.push(1000);
+        _sellFee.push(e_sellFee);
         _sellFee.push(0);
 
         isTaxless[msg.sender] = true;
@@ -323,7 +333,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isTaxless[address(this)] = true;
         isTaxless[address(0)] = true;
 
-        _mint(msg.sender, 1000 ether);
+        _mint(msg.sender, e_totalSupply ether);
     }
 
     /**
