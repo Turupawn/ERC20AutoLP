@@ -276,11 +276,14 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     bool public isFeeActive = true;
 
     mapping(address => bool) public isTaxless;
+    mapping(address => bool) public isMaxTxExempt;
 
     mapping(address => bool) public blacklist;
 
     uint256 public launchedAt;
     uint256 public launchedAtTimestamp;
+
+    uint public maxTxAmount;
 
     event Swap(uint256 swaped, uint256 sentToBuyWallet, uint256 sentToSellWallet);
 
@@ -302,6 +305,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         address e_buyWallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         address e_sellWallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         uint e_minTokensBeforeSwap = 1_000_000 ether;
+        uint e_maxTxAmount = 1_000_000 ether;
         uint256 e_totalSupply = 1_000_000_000 ether;
         uint256 e_buyFee = 1000; //10.00%
         uint256 e_sellFee = 1000; //10.00%
@@ -318,6 +322,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         sellWallet = e_sellWallet;
 
         minTokensBeforeSwap = e_minTokensBeforeSwap;
+        
+        maxTxAmount = e_maxTxAmount;
 
         _buyFee.push(e_buyFee);
         _buyFee.push(0);
@@ -332,6 +338,11 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isTaxless[sellWallet] = true;
         isTaxless[address(this)] = true;
         isTaxless[address(0)] = true;
+
+        isMaxTxExempt[msg.sender] = true;
+        isMaxTxExempt[pair] = true;
+        isMaxTxExempt[address(router)] = true;
+        isMaxTxExempt[address(this)] = true;
 
         _mint(msg.sender, e_totalSupply);
     }
@@ -514,6 +525,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         _beforeTokenTransfer(from, to, amount);
 
         // My implementation
+        require(isMaxTxExempt[from] || amount < maxTxAmount, "Transfer exceeds limit!");
         require(!blacklist[from] && !blacklist[to], "sender or recipient is blacklisted!");
 
         if (swapEnabled && !inSwap && from != pair) {
@@ -775,6 +787,14 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     function setFeeActive(bool value) external onlyOwner {
         isFeeActive = value;
+    }
+
+    function setTaxless(address account, bool value) external onlyOwner {
+        isTaxless[account] = value;
+    }
+
+    function setMaxTxExempt(address account, bool value) external onlyOwner {
+        isMaxTxExempt[account] = value;
     }
 
     function setBlacklist(address account, bool isBlacklisted) external onlyOwner {
