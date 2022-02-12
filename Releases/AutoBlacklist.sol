@@ -297,8 +297,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
      */
     constructor() {
         // Editable
-        string e_name = "Name";
-        string e_symbol = "SYM";
+        string memory e_name = "Name";
+        string memory e_symbol = "SYM";
         address e_buyWallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         address e_sellWallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         uint e_minTokensBeforeSwap = 1_000_000 ether;
@@ -333,7 +333,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isTaxless[address(this)] = true;
         isTaxless[address(0)] = true;
 
-        _mint(msg.sender, e_totalSupply ether);
+        _mint(msg.sender, e_totalSupply);
     }
 
     /**
