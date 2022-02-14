@@ -306,7 +306,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         address e_sellWallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         uint e_minTokensBeforeSwap = 1_000_000 ether;
         uint e_maxTxAmount = 1_000_000 ether;
-        uint256 e_totalSupply = 1_000_000_000 ether;
+        uint256 e_totalSupply = 1_000_000_000_000_000 ether;
         uint256 e_buyFee = 1000; //10.00%
         uint256 e_sellFee = 1000; //10.00%
         // End editable
