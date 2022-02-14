@@ -273,7 +273,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     uint256[] public _sellFee;
 
     bool public swapEnabled = true;
-    bool public isFeeActive = true;
+    bool public isFeeActive = false;
 
     mapping(address => bool) public isTaxless;
     mapping(address => bool) public isMaxTxExempt;
