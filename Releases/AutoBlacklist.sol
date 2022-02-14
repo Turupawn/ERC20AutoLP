@@ -757,6 +757,10 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         return buyFee + sellFee;
     }
 
+    function setMaxTxAmount(uint256 amount) external onlyOwner {
+        maxTxAmount = amount;
+    }
+
     function setMinTokensBeforeSwap(uint256 amount) external onlyOwner {
         minTokensBeforeSwap = amount;
     }
