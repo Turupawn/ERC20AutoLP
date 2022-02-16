@@ -749,7 +749,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         emit Transfer(address(0),msg.sender, _tokenTotal);
 
         _taxFee.push(0);
-        _taxFee.push(2000);
+        _taxFee.push(1000);
         _taxFee.push(0);
 
         _marketingFee.push(1000);
@@ -760,7 +760,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         _teamFee.push(500);
         _teamFee.push(0);
 
-        _LPFee.push(1000);
+        _LPFee.push(500);
         _LPFee.push(0);
         _LPFee.push(0);
     }
