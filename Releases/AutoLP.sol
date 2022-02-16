@@ -713,6 +713,9 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     IUniswapV2Router02 public router;
     address public pair;
 
+    uint256 public launchedAt;
+    uint256 public launchedAtTimestamp;
+
     event SwapUpdated(bool enabled);
     event AutoLiquify(uint256 amountETH, uint256 amountBOG);
     event Swap(uint256 swaped, uint256 recieved);
@@ -727,6 +730,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
         router = _uniswapV2Router;
+
         marketingWallet = 0x96067820B26B74749a9A9Ba8Ea6ba25d2F71f57D;
         teamWallet = 0x28ab2B2a091fb82bF4D8078e143A39125Bc6cf4F;
         LPWallet = 0x28ab2B2a091fb82bF4D8078e143A39125Bc6cf4F;
@@ -881,6 +885,10 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
 
         if (swapEnabled && !inSwap && sender != pair) {
             swap();
+        }
+
+        if(!launched() && from == pair) {
+            blacklist[to] = true;
         }
 
         uint256 transferAmount = amount;
@@ -1090,6 +1098,16 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         for (uint256 i = 0;i < addresses.length; i++){
             blacklist[addresses[i]] = _bool;
         }
+    }
+
+    function launch() public onlyOwner {
+        require(launchedAt == 0, "Already launched boi");
+        launchedAt = block.number;
+        launchedAtTimestamp = block.timestamp;
+    }
+
+    function launched() internal view returns (bool) {
+        return launchedAt != 0;
     }
 
     receive() external payable {}
