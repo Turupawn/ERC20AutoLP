@@ -682,6 +682,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     uint256 internal _reflectionTotal = (MAX - (MAX % _tokenTotal));
 
     mapping(address => bool) public isTaxless;
+    mapping(address => bool) public isMaxTxExempt;
     mapping(address => bool) internal _isExcluded;
     address[] internal _excluded;
 
@@ -704,6 +705,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     bool public swapEnabled = true;
 
     uint256 public maxWalletAmount = _tokenTotal.mul(1000).div(1000); // 0.5%
+    uint256 public maxTxAmount = _tokenTotal;
     uint256 public minTokensBeforeSwap = 1_000_000e9;
 
     address public marketingWallet;
@@ -740,6 +742,11 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         isTaxless[teamWallet] = true;
         isTaxless[LPWallet] = true;
         isTaxless[address(this)] = true;
+
+        isMaxTxExempt[msg.sender] = true;
+        isMaxTxExempt[pair] = true;
+        isMaxTxExempt[address(router)] = true;
+        isMaxTxExempt[address(this)] = true;
 
         excludeAccount(address(pair));
         excludeAccount(address(this));
@@ -880,6 +887,8 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         require(amount > 0, 'Transfer amount must be greater than zero');
 
         require(isTaxless[sender] || isTaxless[recipient] || recipient == pair || balanceOf(recipient).add(amount) <= maxWalletAmount, 'Max Wallet Limit Exceeds!');
+
+        require(isMaxTxExempt[sender] || amount <= maxTxAmount, "Transfer exceeds limit!");
 
         require(!blacklist[sender] && !blacklist[recipient], "sender or recipient is blacklisted!");
 
@@ -1037,6 +1046,10 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         isTaxless[account] = value;
     }
 
+    function setMaxTxExempt(address account, bool value) external onlyOwner {
+        isMaxTxExempt[account] = value;
+    }
+
     function setSwapEnabled(bool enabled) external onlyOwner {
         swapEnabled = enabled;
         SwapUpdated(enabled);
@@ -1084,6 +1097,10 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
 
     function setMaxWalletAmount(uint256 percentage) external onlyOwner {
         maxWalletAmount = _tokenTotal.mul(percentage).div(10000);
+    }
+
+    function setMaxTxAmount(uint256 percentage) external onlyOwner {
+        maxTxAmount = _tokenTotal.mul(percentage).div(10000);
     }
 
     function setMinTokensBeforeSwap(uint256 amount) external onlyOwner {
