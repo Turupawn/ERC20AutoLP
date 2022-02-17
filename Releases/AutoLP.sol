@@ -664,13 +664,13 @@ interface IPinkAntiBot {
   ) external;
 }
 
-contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
+contract DoxxedMustard is Context, IERC20, Ownable, ReentrancyGuard {
     using SafeMath for uint256;
     using Address for address;
     using TransferHelper for address;
 
-    string private _name = 'GhostCap';
-    string private _symbol = 'GHOST';
+    string private _name = 'Doxxed Mustard';
+    string private _symbol = 'DoXXed';
     uint8 private _decimals = 9;
 
     mapping(address => uint256) internal _reflectionBalance;
@@ -678,7 +678,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     mapping(address => mapping(address => uint256)) internal _allowances;
 
     uint256 private constant MAX = ~uint256(0);
-    uint256 internal _tokenTotal = 1_000_000_000_000_000e9;
+    uint256 internal _tokenTotal = 1_000_000_000e9;
     uint256 internal _reflectionTotal = (MAX - (MAX % _tokenTotal));
 
     mapping(address => bool) public isTaxless;
@@ -704,7 +704,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     bool private inSwap;
     bool public swapEnabled = true;
 
-    uint256 public maxWalletAmount = _tokenTotal.mul(100).div(10000); // 1%
+    uint256 public maxWalletAmount = _tokenTotal.mul(10000).div(10000); // 1%
     uint256 public maxTxAmount = _tokenTotal;
     uint256 public minTokensBeforeSwap = 1_000_000e9;
 
@@ -733,9 +733,9 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
         pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
         router = _uniswapV2Router;
 
-        marketingWallet = 0x96067820B26B74749a9A9Ba8Ea6ba25d2F71f57D;
-        teamWallet = 0x28ab2B2a091fb82bF4D8078e143A39125Bc6cf4F;
-        LPWallet = 0x28ab2B2a091fb82bF4D8078e143A39125Bc6cf4F;
+        marketingWallet = 0x25aD0d9D3CE0199211637894EA0383740d8493cF;
+        teamWallet = 0xD5E56D1c0A4d14eAD2109797a500CB906FDc4aEB;
+        LPWallet = 0xeAfC219bd3AA2a9377107927156928cADb91Ff54;
         
         isTaxless[msg.sender] = true;
         isTaxless[marketingWallet] = true;
