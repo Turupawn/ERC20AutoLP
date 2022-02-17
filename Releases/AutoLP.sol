@@ -704,7 +704,7 @@ contract GhostCap is Context, IERC20, Ownable, ReentrancyGuard {
     bool private inSwap;
     bool public swapEnabled = true;
 
-    uint256 public maxWalletAmount = _tokenTotal.mul(1000).div(1000); // 0.5%
+    uint256 public maxWalletAmount = _tokenTotal.mul(100).div(10000); // 1%
     uint256 public maxTxAmount = _tokenTotal;
     uint256 public minTokensBeforeSwap = 1_000_000e9;
 
