@@ -305,12 +305,12 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         string memory e_symbol = "SYM";
         address e_walletA = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         address e_walletB = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
-        uint256 e_totalSupply = 1_000_000_000_000_000 ether;
-        uint minTokensBeforeSwap = e_totalSupply;
-        uint maxTxAmount = e_totalSupply;
-        uint maxWalletAmount = e_totalSupply;
-        uint256 e_walletAFee = 250; //2.50% on buy and sell
-        uint256 e_walletBFee = 500; //5.00% on buy and sell
+        uint256 e_totalSupply = 1_000_000 ether;
+        uint minTokensBeforeSwap = e_totalSupply;   // Off by default
+        uint maxTxAmount = e_totalSupply;           // Off by default
+        uint maxWalletAmount = e_totalSupply;       // Off by default
+        uint256 e_walletAFee = 250;                 //2.50% on buy and sell
+        uint256 e_walletBFee = 500;                 //5.00% on buy and sell
         // End editable
         
         _name = e_name;
