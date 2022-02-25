@@ -306,9 +306,9 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         address e_walletA = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         address e_walletB = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         uint256 e_totalSupply = 1_000_000 ether;
-        uint minTokensBeforeSwap = e_totalSupply;   // Off by default
-        uint maxTxAmount = e_totalSupply;           // Off by default
-        uint maxWalletAmount = e_totalSupply;       // Off by default
+        minTokensBeforeSwap = e_totalSupply;   // Off by default
+        maxTxAmount = e_totalSupply;           // Off by default
+        maxWalletAmount = e_totalSupply;       // Off by default
         uint256 e_walletAFee = 250;                 //2.50% on buy and sell
         uint256 e_walletBFee = 500;                 //5.00% on buy and sell
         // End editable
@@ -527,7 +527,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         // My implementation
         require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(!blacklist[from] && !blacklist[to], "sender or recipient is blacklisted!");
-        require(isMaxTxExempt[recipient] || balanceOf(recipient) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
+        require(isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
 
         if (swapEnabled && !inSwap && from != pair) {
             swap();
@@ -759,11 +759,11 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     }
 
     function setMaxTxAmount(uint256 percentage) external onlyOwner {
-        maxTxAmount = _tokenTotal.mul(percentage).div(10000);
+        maxTxAmount = (_totalSupply * percentage) / 10000;
     }
 
     function setMaxWalletAmount(uint256 percentage) external onlyOwner {
-        maxWalletAmount = _tokenTotal.mul(percentage).div(10000);
+        maxWalletAmount = (_totalSupply * percentage) / 10000;
     }
 
     function setMinTokensBeforeSwap(uint256 amount) external onlyOwner {
