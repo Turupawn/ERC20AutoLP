@@ -525,8 +525,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         _beforeTokenTransfer(from, to, amount);
 
         // My implementation
-        require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(!blacklist[from] && !blacklist[to], "sender or recipient is blacklisted!");
+        require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
 
         if (swapEnabled && !inSwap && from != pair) {
@@ -778,13 +778,13 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         walletB = wallet;
     }
 
-    function setBuyFee(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
+    function setWalletAFees(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
         _walletAFee[0] = buy;
         _walletAFee[1] = sell;
         _walletAFee[2] = p2p;
     }
 
-    function setSellFee(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
+    function setWalletBFees(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
         _walletBFee[0] = buy;
         _walletBFee[1] = sell;
         _walletBFee[2] = p2p;
