@@ -256,21 +256,21 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     // My variables
 
     bool private inSwap;
-    uint256 internal _buyFeeCollected;
-    uint256 internal _sellFeeCollected;
+    uint256 internal _walletAFeeCollected;
+    uint256 internal _walletBFeeCollected;
 
     uint256 public minTokensBeforeSwap;
     
-    address public buyWallet;
-    address public sellWallet;
+    address public walletA;
+    address public walletB;
 
     IUniswapV2Router02 public router;
     address public pair;
 
     uint256 public _feeDecimal = 2;
     // index 0 = buy fee, index 1 = sell fee, index 2 = p2p fee
-    uint256[] public _buyFee;
-    uint256[] public _sellFee;
+    uint256[] public _walletAFee;
+    uint256[] public _walletBFee;
 
     bool public swapEnabled = true;
     bool public isFeeActive = false;
@@ -285,7 +285,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     uint public maxTxAmount;
 
-    event Swap(uint256 swaped, uint256 sentToBuyWallet, uint256 sentToSellWallet);
+    event Swap(uint256 swaped, uint256 sentToWalletA, uint256 sentToWalletB);
 
     // Openzeppelin functions
 
@@ -302,13 +302,13 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         // Editable
         string memory e_name = "Name";
         string memory e_symbol = "SYM";
-        address e_buyWallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
-        address e_sellWallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
+        address e_walletA = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
+        address e_walletB = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         uint e_minTokensBeforeSwap = 1_000_000 ether;
         uint e_maxTxAmount = 1_000_000 ether;
         uint256 e_totalSupply = 1_000_000_000_000_000 ether;
-        uint256 e_buyFee = 1000; //10.00%
-        uint256 e_sellFee = 1000; //10.00%
+        uint256 e_walletAFee = 1000; //10.00%
+        uint256 e_walletBFee = 1000; //10.00%
         // End editable
         
         _name = e_name;
@@ -318,24 +318,24 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
         router = _uniswapV2Router;
 
-        buyWallet = e_buyWallet;
-        sellWallet = e_sellWallet;
+        walletA = e_walletA;
+        walletB = e_walletB;
 
         minTokensBeforeSwap = e_minTokensBeforeSwap;
         
         maxTxAmount = e_maxTxAmount;
 
-        _buyFee.push(e_buyFee);
-        _buyFee.push(0);
-        _buyFee.push(0);
+        _walletAFee.push(e_walletAFee);
+        _walletAFee.push(0);
+        _walletAFee.push(0);
 
-        _sellFee.push(0);
-        _sellFee.push(e_sellFee);
-        _sellFee.push(0);
+        _walletBFee.push(0);
+        _walletBFee.push(e_walletBFee);
+        _walletBFee.push(0);
 
         isTaxless[msg.sender] = true;
-        isTaxless[buyWallet] = true;
-        isTaxless[sellWallet] = true;
+        isTaxless[walletA] = true;
+        isTaxless[walletB] = true;
         isTaxless[address(this)] = true;
         isTaxless[address(0)] = true;
 
@@ -712,7 +712,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     function swap() private lockTheSwap {
         // How much are we swaping?
-        uint256 totalCollected = _buyFeeCollected + _sellFeeCollected;
+        uint256 totalCollected = _walletAFeeCollected + _walletBFeeCollected;
 
         if(minTokensBeforeSwap > totalCollected) return;
 
@@ -735,26 +735,26 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         uint256 amountFee = address(this).balance - balanceBefore;
         
         // Send to marketing
-        uint256 amountBuy = (amountFee * _buyFeeCollected) / totalCollected;
-        if(amountBuy > 0) sendViaCall(payable(buyWallet), amountBuy);
+        uint256 amountBuy = (amountFee * _walletAFeeCollected) / totalCollected;
+        if(amountBuy > 0) sendViaCall(payable(walletA), amountBuy);
 
         // Send to team
         uint256 amountSell = address(this).balance;
-        if(amountSell > 0) sendViaCall(payable(sellWallet), address(this).balance);
+        if(amountSell > 0) sendViaCall(payable(walletB), address(this).balance);
         
-        _buyFeeCollected = 0;
-        _sellFeeCollected = 0;
+        _walletAFeeCollected = 0;
+        _walletBFeeCollected = 0;
 
         emit Swap(totalCollected, amountBuy, amountSell);
     }
 
     function calculateFee(uint256 feeIndex, uint256 amount) internal returns(uint256) {
-        uint256 buyFee = (amount * _buyFee[feeIndex]) / (10**(_feeDecimal + 2));
-        uint256 sellFee = (amount * _sellFee[feeIndex]) / (10**(_feeDecimal + 2));
+        uint256 walletAFee = (amount * _walletAFee[feeIndex]) / (10**(_feeDecimal + 2));
+        uint256 walletBFee = (amount * _walletBFee[feeIndex]) / (10**(_feeDecimal + 2));
         
-        _buyFeeCollected += buyFee;
-        _sellFeeCollected += sellFee;
-        return buyFee + sellFee;
+        _walletAFeeCollected += walletAFee;
+        _walletBFeeCollected += walletBFee;
+        return walletAFee + walletBFee;
     }
 
     function setMaxTxAmount(uint256 amount) external onlyOwner {
@@ -765,24 +765,24 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         minTokensBeforeSwap = amount;
     }
 
-    function setBuyWallet(address wallet)  external onlyOwner {
-        buyWallet = wallet;
+    function setWalletA(address wallet)  external onlyOwner {
+        walletA = wallet;
     }
 
-    function setSellWallet(address wallet)  external onlyOwner {
-        sellWallet = wallet;
+    function setWalletB(address wallet)  external onlyOwner {
+        walletB = wallet;
     }
 
     function setBuyFee(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
-        _buyFee[0] = buy;
-        _buyFee[1] = sell;
-        _buyFee[2] = p2p;
+        _walletAFee[0] = buy;
+        _walletAFee[1] = sell;
+        _walletAFee[2] = p2p;
     }
 
     function setSellFee(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
-        _sellFee[0] = buy;
-        _sellFee[1] = sell;
-        _sellFee[2] = p2p;
+        _walletBFee[0] = buy;
+        _walletBFee[1] = sell;
+        _walletBFee[2] = p2p;
     }
 
     function setSwapEnabled(bool enabled) external onlyOwner {
