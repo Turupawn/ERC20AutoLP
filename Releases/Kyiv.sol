@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.11;
+pragma solidity 0.8.12;
 
 abstract contract Context {
     function _msgSender() internal view virtual returns (address) {
@@ -284,6 +284,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     uint256 public launchedAtTimestamp;
 
     uint public maxTxAmount;
+    uint public maxWalletAmount;
 
     event Swap(uint256 swaped, uint256 sentToWalletA, uint256 sentToWalletB);
 
@@ -304,11 +305,12 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         string memory e_symbol = "SYM";
         address e_walletA = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         address e_walletB = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
-        uint e_minTokensBeforeSwap = 1_000_000 ether;
-        uint e_maxTxAmount = 1_000_000 ether;
         uint256 e_totalSupply = 1_000_000_000_000_000 ether;
-        uint256 e_walletAFee = 1000; //10.00%
-        uint256 e_walletBFee = 1000; //10.00%
+        uint minTokensBeforeSwap = e_totalSupply;
+        uint maxTxAmount = e_totalSupply;
+        uint maxWalletAmount = e_totalSupply;
+        uint256 e_walletAFee = 250; //2.50% on buy and sell
+        uint256 e_walletBFee = 500; //5.00% on buy and sell
         // End editable
         
         _name = e_name;
@@ -321,28 +323,26 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         walletA = e_walletA;
         walletB = e_walletB;
 
-        minTokensBeforeSwap = e_minTokensBeforeSwap;
-        
-        maxTxAmount = e_maxTxAmount;
-
+        _walletAFee.push(e_walletAFee);
         _walletAFee.push(e_walletAFee);
         _walletAFee.push(0);
-        _walletAFee.push(0);
 
-        _walletBFee.push(0);
+        _walletBFee.push(e_walletBFee);
         _walletBFee.push(e_walletBFee);
         _walletBFee.push(0);
 
         isTaxless[msg.sender] = true;
+        isTaxless[address(this)] = true;
         isTaxless[walletA] = true;
         isTaxless[walletB] = true;
-        isTaxless[address(this)] = true;
         isTaxless[address(0)] = true;
 
         isMaxTxExempt[msg.sender] = true;
+        isMaxTxExempt[address(this)] = true;
+        isMaxTxExempt[walletA] = true;
+        isMaxTxExempt[walletB] = true;
         isMaxTxExempt[pair] = true;
         isMaxTxExempt[address(router)] = true;
-        isMaxTxExempt[address(this)] = true;
 
         _mint(msg.sender, e_totalSupply);
     }
@@ -525,8 +525,9 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         _beforeTokenTransfer(from, to, amount);
 
         // My implementation
-        require(isMaxTxExempt[from] || amount < maxTxAmount, "Transfer exceeds limit!");
+        require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(!blacklist[from] && !blacklist[to], "sender or recipient is blacklisted!");
+        require(isMaxTxExempt[recipient] || balanceOf(recipient) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
 
         if (swapEnabled && !inSwap && from != pair) {
             swap();
@@ -757,8 +758,12 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         return walletAFee + walletBFee;
     }
 
-    function setMaxTxAmount(uint256 amount) external onlyOwner {
-        maxTxAmount = amount;
+    function setMaxTxAmount(uint256 percentage) external onlyOwner {
+        maxTxAmount = _tokenTotal.mul(percentage).div(10000);
+    }
+
+    function setMaxWalletAmount(uint256 percentage) external onlyOwner {
+        maxWalletAmount = _tokenTotal.mul(percentage).div(10000);
     }
 
     function setMinTokensBeforeSwap(uint256 amount) external onlyOwner {
