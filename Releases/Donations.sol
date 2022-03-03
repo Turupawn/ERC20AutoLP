@@ -304,9 +304,9 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         // Editable
         string memory e_name = "Name";
         string memory e_symbol = "SYM";
-        marketing_wallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
-        donation_wallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
-        liquidity_wallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
+        marketing_wallet = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
+        donation_wallet = 0xbef34f2FCAe62dC3404c3d01AF65a7784c9c4A19;
+        liquidity_wallet = 0x08966BfFa14A7d0d7751355C84273Bb2eaF20FC3;
         uint e_totalSupply = 1_000_000 ether;
         minTokensBeforeSwap = e_totalSupply;   // Off by default
         maxTxAmount = e_totalSupply;           // Off by default
@@ -341,9 +341,9 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
         isMaxTxExempt[msg.sender] = true;
         isMaxTxExempt[address(this)] = true;
-        isTaxless[marketing_wallet] = true;
-        isTaxless[donation_wallet] = true;
-        isTaxless[liquidity_wallet] = true;
+        isMaxTxExempt[marketing_wallet] = true;
+        isMaxTxExempt[donation_wallet] = true;
+        isMaxTxExempt[liquidity_wallet] = true;
         isMaxTxExempt[pair] = true;
         isMaxTxExempt[address(router)] = true;
 
