@@ -286,7 +286,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     uint public maxTxAmount;
     uint public maxWalletAmount;
 
-    event Swap(uint swaped, uint sentToMarketing, uint sentToDonation, uint sentToLiquidity);
+    event Swap(uint swaped, uint sentToMarketing, uint sentToDonation);
+    event AutoLiquify(uint256 amountETH, uint256 amountBOG);
 
     // Openzeppelin functions
 
@@ -306,7 +307,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         marketing_wallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         donation_wallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
         liquidity_wallet = 0xb6F5414bAb8d5ad8F33E37591C02f7284E974FcB;
-        uint256 e_totalSupply = 1_000_000 ether;
+        uint e_totalSupply = 1_000_000 ether;
         minTokensBeforeSwap = e_totalSupply;   // Off by default
         maxTxAmount = e_totalSupply;           // Off by default
         maxWalletAmount = e_totalSupply;       // Off by default
@@ -660,6 +661,193 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
      * minting and burning.
      *
      * Calling conditions:
+     *
+     * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+     * will be transferred to `to`.
+     * - when `from` is zero, `amount` tokens will be minted for `to`.
+     * - when `to` is zero, `amount` of ``from``'s tokens will be burned.
+     * - `from` and `to` are never both zero.
+     *
+     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+     */
+    function _beforeTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual {}
+
+    /**
+     * @dev Hook that is called after any transfer of tokens. This includes
+     * minting and burning.
+     *
+     * Calling conditions:
+     *
+     * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
+     * has been transferred to `to`.
+     * - when `from` is zero, `amount` tokens have been minted for `to`.
+     * - when `to` is zero, `amount` of ``from``'s tokens have been burned.
+     * - `from` and `to` are never both zero.
+     *
+     * To learn more about hooks, head to xref:ROOT:extending-contracts.adoc#using-hooks[Using Hooks].
+     */
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 amount
+    ) internal virtual {}
+
+    // My functions
+
+    modifier lockTheSwap() {
+        inSwap = true;
+        _;
+        inSwap = false;
+    }
+
+    function sendViaCall(address payable _to, uint amount) private {
+        (bool sent, bytes memory data) = _to.call{value: amount}("");
+        data;
+        require(sent, "Failed to send Ether");
+    }
+
+    function swap() private lockTheSwap {
+        // How much are we swaping?
+        uint totalCollected = _marketingFeeCollected + _donationFeeCollected + _liquidityFeeCollected;
+        uint amountToSwap = _marketingFeeCollected + _donationFeeCollected + (_liquidityFeeCollected / 2);
+        uint amountTokensToLiquidity = totalCollected - amountToSwap;
+
+        if(minTokensBeforeSwap > totalCollected) return;
+
+        // Let's swap for eth now
+        address[] memory sellPath = new address[](2);
+        sellPath[0] = address(this);
+        sellPath[1] = router.WETH();       
+
+        uint balanceBefore = address(this).balance;
+
+        _approve(address(this), address(router), amountToSwap);
+        router.swapExactTokensForETHSupportingFeeOnTransferTokens(
+            amountToSwap,
+            0,
+            sellPath,
+            address(this),
+            block.timestamp
+        );
+
+        uint amountFee = address(this).balance - balanceBefore;
+        
+        // Send to marketing
+        uint amountMarketing = (amountFee * _marketingFeeCollected) / totalCollected;
+        if(amountMarketing > 0) sendViaCall(payable(marketing_wallet), amountMarketing);
+
+        // Send to donations
+        uint amountDonation = (amountFee * _donationFeeCollected) / totalCollected;
+        if(amountDonation > 0) sendViaCall(payable(donation_wallet), amountDonation);
+
+        // Send to LP
+        uint256 amountETHLiquidity = address(this).balance;
+        if(amountTokensToLiquidity > 0){
+            _approve(address(this), address(router), amountTokensToLiquidity);
+            router.addLiquidityETH{value: amountETHLiquidity}(
+                address(this),
+                amountTokensToLiquidity,
+                0,
+                0,
+                liquidity_wallet,
+                block.timestamp
+            );
+            emit AutoLiquify(amountETHLiquidity, amountTokensToLiquidity);
+        }
+        
+        _marketingFeeCollected = 0;
+        _donationFeeCollected = 0;
+        _liquidityFeeCollected = 0;
+
+        emit Swap(totalCollected, amountMarketing, amountDonation);
+    }
+
+    function calculateFee(uint256 feeIndex, uint256 amount) internal returns(uint256) {
+        uint256 marketingFee = (amount * _marketingFee[feeIndex]) / (10**(_feeDecimal + 2));
+        uint256 donationFee = (amount * _donationFee[feeIndex]) / (10**(_feeDecimal + 2));
+        uint256 liquidityFee = (amount * _liquidityFee[feeIndex]) / (10**(_feeDecimal + 2));
+        
+        _marketingFeeCollected += marketingFee;
+        _donationFeeCollected += donationFee;
+        _liquidityFeeCollected += liquidityFee;
+        return marketingFee + donationFee + liquidityFee;
+    }
+
+    function setMaxTxAmount(uint256 percentage) external onlyOwner {
+        maxTxAmount = (_totalSupply * percentage) / 10000;
+    }
+
+    function setMaxWalletAmount(uint256 percentage) external onlyOwner {
+        maxWalletAmount = (_totalSupply * percentage) / 10000;
+    }
+
+    function setMinTokensBeforeSwap(uint256 amount) external onlyOwner {
+        minTokensBeforeSwap = amount;
+    }
+
+    function setMarketingWallet(address wallet)  external onlyOwner {
+        marketing_wallet = wallet;
+    }
+
+    function setDonationWallet(address wallet)  external onlyOwner {
+        donation_wallet = wallet;
+    }
+
+    function setLiquidityWallet(address wallet)  external onlyOwner {
+        liquidity_wallet = wallet;
+    }
+
+    function setMarketingFees(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
+        _marketingFee[0] = buy;
+        _marketingFee[1] = sell;
+        _marketingFee[2] = p2p;
+    }
+
+    function setDonationFees(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
+        _donationFee[0] = buy;
+        _donationFee[1] = sell;
+        _donationFee[2] = p2p;
+    }
+
+    function setLiquidityFees(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
+        _liquidityFee[0] = buy;
+        _liquidityFee[1] = sell;
+        _liquidityFee[2] = p2p;
+    }
+
+    function setSwapEnabled(bool enabled) external onlyOwner {
+        swapEnabled = enabled;
+    }
+
+    function setFeeActive(bool value) external onlyOwner {
+        isFeeActive = value;
+    }
+
+    function setTaxless(address account, bool value) external onlyOwner {
+        isTaxless[account] = value;
+    }
+
+    function setMaxTxExempt(address account, bool value) external onlyOwner {
+        isMaxTxExempt[account] = value;
+    }
+
+    function setBlacklist(address account, bool isBlacklisted) external onlyOwner {
+        blacklist[account] = isBlacklisted;
+    }
+
+    function multiBlacklist(address[] memory addresses, bool _bool) external onlyOwner {
+        for (uint256 i = 0;i < addresses.length; i++){
+            blacklist[addresses[i]] = _bool;
+        }
+    }
+
+    fallback() external payable {}
+    receive() external payable {}
+}s:
      *
      * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
      * will be transferred to `to`.
