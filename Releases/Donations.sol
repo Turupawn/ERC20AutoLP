@@ -777,11 +777,11 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         return marketingFee + donationFee + liquidityFee;
     }
 
-    function setMaxTxAmount(uint256 percentage) external onlyOwner {
+    function setMaxTxPercentage(uint256 percentage) external onlyOwner {
         maxTxAmount = (_totalSupply * percentage) / 10000;
     }
 
-    function setMaxWalletAmount(uint256 percentage) external onlyOwner {
+    function setMaxWalletPercentage(uint256 percentage) external onlyOwner {
         maxWalletAmount = (_totalSupply * percentage) / 10000;
     }
 
