@@ -472,16 +472,16 @@ contract Safuu is ERC20Detailed, Ownable {
 
     constructor() ERC20Detailed("Safuu", "SAFUU", uint8(DECIMALS)) Ownable() {
 
-        router = IPancakeSwapRouter(0x10ED43C718714eb63d5aA57B78B54704E256024E); 
+        router = IPancakeSwapRouter(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff); 
         pair = IPancakeSwapFactory(router.factory()).createPair(
             router.WETH(),
             address(this)
         );
       
-        autoLiquidityReceiver = 0x5562640B953b6c2f79a655E930aFa68b2a65C627;
-        treasuryReceiver = 0xa9c6d0cc785569b450393A69599E97fAED5D9dd9; 
-        safuuInsuranceFundReceiver = 0x082D0FbCA3D80b2d4A05E20bFc227523bE8EFEF3;
-        firePit = 0xaA32C984AfDfa6B95e88B8aB7faBfa65De89b98C;
+        treasuryReceiver = 0x730bF3B67090511A64ABA060FbD2F7903536321E; 
+        autoLiquidityReceiver = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
+        safuuInsuranceFundReceiver = 0xbef34f2FCAe62dC3404c3d01AF65a7784c9c4A19;
+        firePit = 0x08966BfFa14A7d0d7751355C84273Bb2eaF20FC3;
 
         _allowedFragments[address(this)][address(router)] = uint256(-1);
         pairAddress = pair;
@@ -592,6 +592,7 @@ contract Safuu is ERC20Detailed, Ownable {
         if (shouldSwapBack()) {
             swapBack();
         }
+        
 
         uint256 gonAmount = amount.mul(_gonsPerFragment);
         _gonBalances[sender] = _gonBalances[sender].sub(gonAmount);
