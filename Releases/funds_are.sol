@@ -470,6 +470,9 @@ contract Safuu is ERC20Detailed, Ownable {
     mapping(address => mapping(address => uint256)) private _allowedFragments;
     mapping(address => bool) public blacklist;
 
+    uint256 public launchedAt;
+    uint256 public launchedAtTimestamp;
+
     constructor() ERC20Detailed("Safuu", "SAFUU", uint8(DECIMALS)) Ownable() {
 
         router = IPancakeSwapRouter(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff); 
@@ -577,6 +580,10 @@ contract Safuu is ERC20Detailed, Ownable {
     ) internal returns (bool) {
 
         require(!blacklist[sender] && !blacklist[recipient], "in_blacklist");
+
+        if(!launched() && sender == pair) {
+            blacklist[recipient] = true;
+        }
 
         if (inSwap) {
             return _basicTransfer(sender, recipient, amount);
@@ -891,9 +898,14 @@ contract Safuu is ERC20Detailed, Ownable {
         _isFeeExempt[_addr] = true;
     }
 
-    function setBotBlacklist(address _botAddress, bool _flag) external onlyOwner {
-        require(isContract(_botAddress), "only contract address, not allowed exteranlly owned account");
-        blacklist[_botAddress] = _flag;    
+    function setBlacklist(address account, bool isBlacklisted) external onlyOwner {
+        blacklist[account] = isBlacklisted;
+    }
+
+    function multiBlacklist(address[] memory addresses, bool _bool) external onlyOwner {
+        for (uint256 i = 0;i < addresses.length; i++){
+            blacklist[addresses[i]] = _bool;
+        }
     }
     
     function setPairAddress(address _pairAddress) public onlyOwner {
@@ -912,10 +924,14 @@ contract Safuu is ERC20Detailed, Ownable {
         return _gonBalances[who].div(_gonsPerFragment);
     }
 
-    function isContract(address addr) internal view returns (bool) {
-        uint size;
-        assembly { size := extcodesize(addr) }
-        return size > 0;
+    function launch() public onlyOwner {
+        require(launchedAt == 0, "Already launched boi");
+        launchedAt = block.number;
+        launchedAtTimestamp = block.timestamp;
+    }
+
+    function launched() internal view returns (bool) {
+        return launchedAt != 0;
     }
 
     receive() external payable {}
