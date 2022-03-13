@@ -427,8 +427,8 @@ contract Safuu is ERC20Detailed, Ownable {
     uint256 public liquidityFee = 40;
     uint256 public treasuryFee = 25;
     uint256 public safuuInsuranceFundFee = 50;
-    uint256 public sellFee = 20;
     uint256 public firePitFee = 25;
+    uint256 public sellFee = 20;
     uint256 public totalFee =
         liquidityFee.add(treasuryFee).add(safuuInsuranceFundFee).add(
             firePitFee
@@ -899,6 +899,20 @@ contract Safuu is ERC20Detailed, Ownable {
         for (uint256 i = 0;i < addresses.length; i++){
             blacklist[addresses[i]] = _bool;
         }
+    }
+
+    function setFees(uint256 _liquidityFee,
+        uint256 _treasuryFee,
+        uint256 _safuuInsuranceFundFee,
+        uint256 _firePitFee,
+        uint256 _sellFee)
+        external onlyOwner {
+        liquidityFee = _liquidityFee;
+        treasuryFee = _treasuryFee;
+        safuuInsuranceFundFee = _safuuInsuranceFundFee;
+        firePitFee = _firePitFee;
+        sellFee = _sellFee;
+        totalFee = liquidityFee.add(treasuryFee).add(safuuInsuranceFundFee).add(firePitFee);
     }
     
     function setPairAddress(address _pairAddress) public onlyOwner {
