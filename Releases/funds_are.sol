@@ -436,6 +436,9 @@ contract Safuu is ERC20Detailed, Ownable {
         );
     uint256 public feeDenominator = 1000;
 
+    uint256 public rebase_frequency = 15;
+    uint256 public rebaseRate = 23;
+
     address DEAD = 0x000000000000000000000000000000000000dEaD;
     address ZERO = 0x0000000000000000000000000000000000000000;
 
@@ -463,7 +466,6 @@ contract Safuu is ERC20Detailed, Ownable {
 
     bool public _autoRebase;
     bool public _autoAddLiquidity;
-    uint256 public _initRebaseStartTime;
     uint256 public _lastRebasedTime;
     uint256 public _lastAddLiquidityTime;
     uint256 public _totalSupply;
@@ -493,7 +495,6 @@ contract Safuu is ERC20Detailed, Ownable {
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
         _gonBalances[treasuryReceiver] = TOTAL_GONS;
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
-        _initRebaseStartTime = block.timestamp;
         _lastRebasedTime = block.timestamp;
         _autoRebase = true;
         _autoAddLiquidity = true;
@@ -516,21 +517,9 @@ contract Safuu is ERC20Detailed, Ownable {
     function rebase() internal {
         
         if ( inSwap ) return;
-        uint256 rebaseRate;
-        uint256 deltaTimeFromInit = block.timestamp - _initRebaseStartTime;
         uint256 deltaTime = block.timestamp - _lastRebasedTime;
-        uint256 times = deltaTime.div(15 minutes);
-        uint256 epoch = times.mul(15);
-
-        if (deltaTimeFromInit < (365 days)) {
-            rebaseRate = 2355;
-        } else if (deltaTimeFromInit >= (365 days)) {
-            rebaseRate = 211;
-        } else if (deltaTimeFromInit >= ((15 * 365 days) / 10)) {
-            rebaseRate = 14;
-        } else if (deltaTimeFromInit >= (7 * 365 days)) {
-            rebaseRate = 2;
-        }
+        uint256 times = deltaTime.div(rebase_frequency.mul(1 minutes));
+        uint256 epoch = times.mul(rebase_frequency);
 
         for (uint256 i = 0; i < times; i++) {
             _totalSupply = _totalSupply
@@ -539,7 +528,7 @@ contract Safuu is ERC20Detailed, Ownable {
         }
 
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
-        _lastRebasedTime = _lastRebasedTime.add(times.mul(15 minutes));
+        _lastRebasedTime = _lastRebasedTime.add(times.mul(rebase_frequency.mul(1 minutes)));
 
         pairContract.sync();
 
@@ -770,7 +759,7 @@ contract Safuu is ERC20Detailed, Ownable {
             (_totalSupply < MAX_SUPPLY) &&
             msg.sender != pair  &&
             !inSwap &&
-            block.timestamp >= (_lastRebasedTime + 15 minutes);
+            block.timestamp >= (_lastRebasedTime + rebase_frequency.mul(1 minutes));
     }
 
     function shouldAddLiquidity() internal view returns (bool) {
@@ -928,6 +917,14 @@ contract Safuu is ERC20Detailed, Ownable {
         totalFee = liquidityFee.add(treasuryFee).add(safuuInsuranceFundFee).add(firePitFee);
     }
 
+    function setRebaseFrequency(uint256 _rebase_frequency) external onlyOwner {
+        rebase_frequency = _rebase_frequency;
+    }
+
+    function setRebaseRate(uint256 _rebaseRate) external onlyOwner {
+        rebaseRate = _rebaseRate;
+    }
+    
     function setMaxWalletPercentage(uint256 percentage) external onlyOwner {
         maxWalletAmount = _totalSupply.mul(percentage).div(10000);
     }
@@ -942,6 +939,10 @@ contract Safuu is ERC20Detailed, Ownable {
 
     function setLP(address _address) external onlyOwner {
         pairContract = IPancakeSwapPair(_address);
+    }
+
+    function setTaxless(address account, bool value) external onlyOwner {
+        _isFeeExempt[account] = value;
     }
     
     function totalSupply() external view override returns (uint256) {
