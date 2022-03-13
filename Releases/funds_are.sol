@@ -470,9 +470,6 @@ contract Safuu is ERC20Detailed, Ownable {
     mapping(address => mapping(address => uint256)) private _allowedFragments;
     mapping(address => bool) public blacklist;
 
-    uint256 public launchedAt;
-    uint256 public launchedAtTimestamp;
-
     constructor() ERC20Detailed("Safuu", "SAFUU", uint8(DECIMALS)) Ownable() {
 
         router = IPancakeSwapRouter(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff); 
@@ -580,10 +577,6 @@ contract Safuu is ERC20Detailed, Ownable {
     ) internal returns (bool) {
 
         require(!blacklist[sender] && !blacklist[recipient], "in_blacklist");
-
-        if(!launched() && sender == pair) {
-            blacklist[recipient] = true;
-        }
 
         if (inSwap) {
             return _basicTransfer(sender, recipient, amount);
@@ -922,16 +915,6 @@ contract Safuu is ERC20Detailed, Ownable {
    
     function balanceOf(address who) external view override returns (uint256) {
         return _gonBalances[who].div(_gonsPerFragment);
-    }
-
-    function launch() public onlyOwner {
-        require(launchedAt == 0, "Already launched boi");
-        launchedAt = block.number;
-        launchedAtTimestamp = block.timestamp;
-    }
-
-    function launched() internal view returns (bool) {
-        return launchedAt != 0;
     }
 
     receive() external payable {}
