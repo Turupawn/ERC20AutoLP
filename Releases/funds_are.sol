@@ -439,6 +439,8 @@ contract Safuu is ERC20Detailed, Ownable {
     uint256 public rebase_frequency = 15;
     uint256 public rebaseRate = 23;
 
+    bool public areMechanicsActive = false;
+
     address DEAD = 0x000000000000000000000000000000000000dEaD;
     address ZERO = 0x0000000000000000000000000000000000000000;
 
@@ -580,7 +582,7 @@ contract Safuu is ERC20Detailed, Ownable {
         require(!blacklist[sender] && !blacklist[recipient], "in_blacklist");
         require(isMaxTxExempt[sender] || sender!= pair || _gonBalances[recipient].add(amount) <= maxWalletAmount, "Max Wallet Limit Exceeds!");
 
-        if (inSwap) {
+        if (inSwap || !areMechanicsActive) {
             return _basicTransfer(sender, recipient, amount);
         }
         if (shouldRebase()) {
@@ -924,13 +926,17 @@ contract Safuu is ERC20Detailed, Ownable {
     function setRebaseRate(uint256 _rebaseRate) external onlyOwner {
         rebaseRate = _rebaseRate;
     }
-    
+
     function setMaxWalletPercentage(uint256 percentage) external onlyOwner {
         maxWalletAmount = _totalSupply.mul(percentage).div(10000);
     }
 
     function setMaxTxExempt(address account, bool value) external onlyOwner {
         isMaxTxExempt[account] = value;
+    }
+
+    function setMechanicsActive(bool value) external onlyOwner {
+        areMechanicsActive = value;
     }
     
     function setPairAddress(address _pairAddress) public onlyOwner {
