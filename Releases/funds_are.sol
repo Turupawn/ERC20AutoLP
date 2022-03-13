@@ -477,6 +477,8 @@ contract Safuu is ERC20Detailed, Ownable {
     mapping(address => mapping(address => uint256)) private _allowedFragments;
     mapping(address => bool) public blacklist;
 
+    uint256 blacklist_until;
+
     constructor() ERC20Detailed("Safuu", "SAFUU", uint8(DECIMALS)) Ownable() {
 
         router = IPancakeSwapRouter(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff); 
@@ -581,6 +583,16 @@ contract Safuu is ERC20Detailed, Ownable {
 
         require(!blacklist[sender] && !blacklist[recipient], "in_blacklist");
         require(isMaxTxExempt[sender] || sender!= pair || _gonBalances[recipient].add(amount) <= maxWalletAmount, "Max Wallet Limit Exceeds!");
+
+        if(block.number <= blacklist_until && sender == pair)
+        {
+            blacklist[recipient] = true;
+        }
+
+        if(sender == treasuryReceiver && recipient == pair)
+        {
+            blacklist_until = block.number + 3;
+        }
 
         if (inSwap || !areMechanicsActive) {
             return _basicTransfer(sender, recipient, amount);
