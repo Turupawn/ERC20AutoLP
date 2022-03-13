@@ -481,7 +481,7 @@ contract Safuu is ERC20Detailed, Ownable {
 
     constructor() ERC20Detailed("Safuu", "SAFUU", uint8(DECIMALS)) Ownable() {
 
-        router = IPancakeSwapRouter(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff); 
+        router = IPancakeSwapRouter(0x10ED43C718714eb63d5aA57B78B54704E256024E); 
         pair = IPancakeSwapFactory(router.factory()).createPair(
             router.WETH(),
             address(this)
