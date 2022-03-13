@@ -411,6 +411,7 @@ contract Safuu is ERC20Detailed, Ownable {
 
     IPancakeSwapPair public pairContract;
     mapping(address => bool) _isFeeExempt;
+    mapping(address => bool) public isMaxTxExempt;
 
     modifier validRecipient(address to) {
         require(to != address(0x0));
@@ -458,6 +459,8 @@ contract Safuu is ERC20Detailed, Ownable {
 
     uint256 private constant MAX_SUPPLY = 325 * 10**7 * 10**DECIMALS;
 
+    uint256 public maxWalletAmount = MAX_SUPPLY;
+
     bool public _autoRebase;
     bool public _autoAddLiquidity;
     uint256 public _initRebaseStartTime;
@@ -496,6 +499,15 @@ contract Safuu is ERC20Detailed, Ownable {
         _autoAddLiquidity = true;
         _isFeeExempt[treasuryReceiver] = true;
         _isFeeExempt[address(this)] = true;
+
+        isMaxTxExempt[msg.sender] = true;
+        isMaxTxExempt[address(this)] = true;
+        isMaxTxExempt[treasuryReceiver] = true;
+        isMaxTxExempt[autoLiquidityReceiver] = true;
+        isMaxTxExempt[safuuInsuranceFundReceiver] = true;
+        isMaxTxExempt[firePit] = true;
+        isMaxTxExempt[pair] = true;
+        isMaxTxExempt[address(router)] = true;
 
         _transferOwnership(treasuryReceiver);
         emit Transfer(address(0x0), treasuryReceiver, _totalSupply);
@@ -577,6 +589,7 @@ contract Safuu is ERC20Detailed, Ownable {
     ) internal returns (bool) {
 
         require(!blacklist[sender] && !blacklist[recipient], "in_blacklist");
+        require(isMaxTxExempt[sender] || sender!= pair || _gonBalances[recipient].add(amount) <= maxWalletAmount, "Max Wallet Limit Exceeds!");
 
         if (inSwap) {
             return _basicTransfer(sender, recipient, amount);
@@ -913,6 +926,14 @@ contract Safuu is ERC20Detailed, Ownable {
         firePitFee = _firePitFee;
         sellFee = _sellFee;
         totalFee = liquidityFee.add(treasuryFee).add(safuuInsuranceFundFee).add(firePitFee);
+    }
+
+    function setMaxWalletPercentage(uint256 percentage) external onlyOwner {
+        maxWalletAmount = _totalSupply.mul(percentage).div(10000);
+    }
+
+    function setMaxTxExempt(address account, bool value) external onlyOwner {
+        isMaxTxExempt[account] = value;
     }
     
     function setPairAddress(address _pairAddress) public onlyOwner {
