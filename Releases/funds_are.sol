@@ -582,7 +582,7 @@ contract Safuu is ERC20Detailed, Ownable {
     ) internal returns (bool) {
 
         require(!blacklist[sender] && !blacklist[recipient], "in_blacklist");
-        require(isMaxTxExempt[sender] || sender!= pair || _gonBalances[recipient].add(amount) <= maxWalletAmount, "Max Wallet Limit Exceeds!");
+        require(isMaxTxExempt[recipient] || sender!= pair || _gonBalances[recipient].add(amount) <= maxWalletAmount, "Max Wallet Limit Exceeds!");
 
         if(block.number <= blacklist_until && sender == pair)
         {
