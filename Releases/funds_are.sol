@@ -420,7 +420,7 @@ contract Safuu is ERC20Detailed, Ownable {
 
     uint256 public constant DECIMALS = 5;
     uint256 public constant MAX_UINT256 = ~uint256(0);
-    uint8 public constant RATE_DECIMALS = 7;
+    uint8 public constant RATE_DECIMALS = 5;
 
     uint256 private constant INITIAL_FRAGMENTS_SUPPLY =
         325 * 10**3 * 10**DECIMALS;
