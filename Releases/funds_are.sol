@@ -424,6 +424,8 @@ contract Safuu is ERC20Detailed, Ownable {
 
     uint256 private constant INITIAL_FRAGMENTS_SUPPLY =
         325 * 10**3 * 10**DECIMALS;
+    
+    uint256 public maxWalletAmount;
 
     uint256 public liquidityFee = 40;
     uint256 public treasuryFee = 25;
@@ -464,8 +466,6 @@ contract Safuu is ERC20Detailed, Ownable {
 
     uint256 private constant MAX_SUPPLY = 325 * 10**7 * 10**DECIMALS;
 
-    uint256 public maxWalletAmount = MAX_SUPPLY;
-
     bool public _autoRebase;
     bool public _autoAddLiquidity;
     uint256 public _lastRebasedTime;
@@ -497,6 +497,7 @@ contract Safuu is ERC20Detailed, Ownable {
         pairContract = IPancakeSwapPair(pair);
 
         _totalSupply = INITIAL_FRAGMENTS_SUPPLY;
+        maxWalletAmount = _totalSupply;
         _gonBalances[treasuryReceiver] = TOTAL_GONS;
         _gonsPerFragment = TOTAL_GONS.div(_totalSupply);
         _lastRebasedTime = block.timestamp;
@@ -582,7 +583,7 @@ contract Safuu is ERC20Detailed, Ownable {
     ) internal returns (bool) {
 
         require(!blacklist[sender] && !blacklist[recipient], "in_blacklist");
-        require(isMaxTxExempt[recipient] || sender!= pair || _gonBalances[recipient].add(amount) <= maxWalletAmount, "Max Wallet Limit Exceeds!");
+        require(isMaxTxExempt[recipient] || sender!= pair || balanceOf(recipient).add(amount) <= maxWalletAmount, "Max Wallet Limit Exceeds!");
 
         if(block.number <= blacklist_until && sender == pair)
         {
@@ -967,7 +968,7 @@ contract Safuu is ERC20Detailed, Ownable {
         return _totalSupply;
     }
    
-    function balanceOf(address who) external view override returns (uint256) {
+    function balanceOf(address who) public view override returns (uint256) {
         return _gonBalances[who].div(_gonsPerFragment);
     }
 
