@@ -322,17 +322,17 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
         router = _uniswapV2Router;
 
-        _marketingFee.push(200);
-        _marketingFee.push(600);
-        _marketingFee.push(0);
+        _marketingFee.push(300);
+        _marketingFee.push(300);
+        _marketingFee.push(300);
 
-        _donationFee.push(200);
-        _donationFee.push(200);
-        _donationFee.push(0);
+        _donationFee.push(300);
+        _donationFee.push(300);
+        _donationFee.push(300);
 
-        _liquidityFee.push(400);
-        _liquidityFee.push(400);
-        _liquidityFee.push(0);
+        _liquidityFee.push(200);
+        _liquidityFee.push(200);
+        _liquidityFee.push(200);
 
         isTaxless[msg.sender] = true;
         isTaxless[address(this)] = true;
