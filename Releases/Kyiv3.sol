@@ -323,15 +323,15 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
         _marketingFee.push(300);
         _marketingFee.push(300);
-        _marketingFee.push(300);
+        _marketingFee.push(0);
 
         _donationFee.push(300);
         _donationFee.push(300);
-        _donationFee.push(300);
+        _donationFee.push(0);
 
         _liquidityFee.push(200);
         _liquidityFee.push(200);
-        _liquidityFee.push(200);
+        _liquidityFee.push(0);
 
         isTaxless[msg.sender] = true;
         isTaxless[address(this)] = true;
