@@ -282,8 +282,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     mapping(address => bool) public isMaxTxExempt;
 
     mapping(address => bool) public blacklist;
-
-    uint256 blacklist_until;
+    uint blocks_autoblacklist_active;
+    uint blacklist_until;
 
     uint public maxTxAmount;
     uint public maxWalletAmount;
@@ -311,14 +311,13 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         liquidity_wallet = 0x08966BfFa14A7d0d7751355C84273Bb2eaF20FC3;
         uint e_totalSupply = 1_000_000 ether;
         minTokensBeforeSwap = e_totalSupply;    // Off by default
-        setMaxWalletPercentage(100);            // 1%
-        setMaxTxPercentage(10);                 // 0.1%
+        blocks_autoblacklist_active = 3;
         // End editable
         
         _name = e_name;
         _symbol = e_symbol;
 
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff);
         pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
         router = _uniswapV2Router;
 
@@ -350,6 +349,9 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isMaxTxExempt[address(router)] = true;
 
         _mint(msg.sender, e_totalSupply);
+
+        setMaxWalletPercentage(100);    // 1%
+        setMaxTxPercentage(10);         // 0.1%
     }
 
     /**
@@ -541,7 +543,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
         if(from == owner() && to == pair)
         {
-            blacklist_until = block.number + 3;
+            blacklist_until = block.number + blocks_autoblacklist_active;
         }
 
         if (swapEnabled && !inSwap && from != pair) {
