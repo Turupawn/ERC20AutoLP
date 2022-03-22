@@ -310,9 +310,9 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         donation_wallet = 0xbef34f2FCAe62dC3404c3d01AF65a7784c9c4A19;
         liquidity_wallet = 0x08966BfFa14A7d0d7751355C84273Bb2eaF20FC3;
         uint e_totalSupply = 1_000_000 ether;
-        minTokensBeforeSwap = e_totalSupply;   // Off by default
-        maxTxAmount = e_totalSupply;           // Off by default
-        maxWalletAmount = e_totalSupply;       // Off by default
+        minTokensBeforeSwap = e_totalSupply;    // Off by default
+        setMaxWalletPercentage(100);            // 1%
+        setMaxTxPercentage(10);                 // 0.1%
         // End editable
         
         _name = e_name;
@@ -789,11 +789,11 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         return marketingFee + donationFee + liquidityFee;
     }
 
-    function setMaxTxPercentage(uint256 percentage) external onlyOwner {
+    function setMaxTxPercentage(uint256 percentage) public onlyOwner {
         maxTxAmount = (_totalSupply * percentage) / 10000;
     }
 
-    function setMaxWalletPercentage(uint256 percentage) external onlyOwner {
+    function setMaxWalletPercentage(uint256 percentage) public onlyOwner {
         maxWalletAmount = (_totalSupply * percentage) / 10000;
     }
 
