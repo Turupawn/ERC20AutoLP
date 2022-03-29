@@ -17,8 +17,9 @@ contract StakingRewards {
     }
 
     IERC20 public token = IERC20(0xc6fde4a5581Bd55005745FcD8e6C9dC3f46Cfe44);
-
     uint public rewardRate = 100;
+    uint public TIMELOCK = 5 minutes;
+    
     uint public lastUpdateTime;
     uint public rewardPerTokenStored;
 
@@ -32,7 +33,6 @@ contract StakingRewards {
     mapping(address => mapping(uint => Timelock)) public timelock_claims;
     mapping(address => uint) public user_timelock_stake_count;
     mapping(address => uint) public user_timelock_claims_count;
-    uint public TIMELOCK = 5 minutes;
 
     // HELPERS //
 
