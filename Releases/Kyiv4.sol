@@ -290,6 +290,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     uint public maxTxAmount;
     uint public maxWalletAmount;
 
+    bool public restrictionsEnabled = false;
+
     event Swap(uint swaped, uint sentToMarketing, uint sentToDonation);
     event AutoLiquify(uint256 amountETH, uint256 amountTokens);
 
@@ -869,6 +871,10 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         for (uint256 i = 0;i < addresses.length; i++){
             whitelist[addresses[i]] = areWhitelisted;
         }
+    }
+
+    function setRestrictionsEnabled(bool value) external onlyOwner {
+        restrictionsEnabled = value;
     }
 
     fallback() external payable {}
