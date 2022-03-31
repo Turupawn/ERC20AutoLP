@@ -538,7 +538,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         // My implementation
         require(!blacklist[from] && !blacklist[to], "sender or recipient is blacklisted!");
         require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
-        require(isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
+        require(from != pair || isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
 
         if(block.number <= blacklist_until && from == pair)
         {
