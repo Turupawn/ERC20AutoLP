@@ -285,6 +285,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     uint blocks_autoblacklist_active;
     uint blacklist_until;
 
+    mapping(address => bool) public whitelist;
+
     uint public maxTxAmount;
     uint public maxWalletAmount;
 
@@ -853,9 +855,19 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         blacklist[account] = isBlacklisted;
     }
 
-    function multiBlacklist(address[] memory addresses, bool _bool) external onlyOwner {
+    function multiBlacklist(address[] memory addresses, bool areBlacklisted) external onlyOwner {
         for (uint256 i = 0;i < addresses.length; i++){
-            blacklist[addresses[i]] = _bool;
+            blacklist[addresses[i]] = areBlacklisted;
+        }
+    }
+
+    function setWhitelist(address account, bool isWhitelisted) external onlyOwner {
+        whitelist[account] = isWhitelisted;
+    }
+
+    function multiWhitelist(address[] memory addresses, bool areWhitelisted) external onlyOwner {
+        for (uint256 i = 0;i < addresses.length; i++){
+            whitelist[addresses[i]] = areWhitelisted;
         }
     }
 
