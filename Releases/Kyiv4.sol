@@ -805,7 +805,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         {
             uint extra_fee_percent = 900;
             uint256 extraFee = (amount * extra_fee_percent) / (10**(_feeDecimal + 2));
-            _liquidityFeeCollected += extraFee;
+            _donationFeeCollected += extraFee;
             return extraFee;
         }
         uint256 marketingFee = (amount * _marketingFee[feeIndex]) / (10**(_feeDecimal + 2));
