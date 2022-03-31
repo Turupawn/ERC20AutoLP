@@ -355,7 +355,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         _mint(msg.sender, e_totalSupply);
 
         setMaxWalletPercentage(100);    // 1%
-        setMaxTxPercentage(10);         // 0.1%
+        setMaxTxPercentage(50);         // 0.5%
     }
 
     /**
