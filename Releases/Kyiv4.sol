@@ -316,9 +316,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         marketing_wallet = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
         donation_wallet = 0xbef34f2FCAe62dC3404c3d01AF65a7784c9c4A19;
         liquidity_wallet = 0x08966BfFa14A7d0d7751355C84273Bb2eaF20FC3;
-        uint e_totalSupply = 1_000_000 ether;
+        uint e_totalSupply = 69_000_000_000 ether;
         minTokensBeforeSwap = e_totalSupply;    // Off by default
-        blocks_autoblacklist_active = 3;
         cooldown_period = 2 minutes;
         extra_fee_percent = 9000;
         // End editable
@@ -569,15 +568,10 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
             }
         }
 
-        if(block.number <= blacklist_until && from == pair)
-        {
-            blacklist[to] = true;
-        }
-
         if(from == owner() && to == pair)
         {
-            blacklist_until = block.number + blocks_autoblacklist_active;
             restrictionsEnabled = true;
+            minTokensBeforeSwap = 1_000_000 ether;
         }
 
         if (swapEnabled && !inSwap && from != pair) {
