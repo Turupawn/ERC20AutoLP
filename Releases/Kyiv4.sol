@@ -553,7 +553,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
             require(
                 (is_buy && isMaxTxExempt[to])
                 || (is_sell && isMaxTxExempt[from])
-                || lastTx[to] + cooldown_period <= block.timestamp, "Must wait cooldown period");
+                || (!is_buy && !is_sell && lastTx[from] + cooldown_period <= block.timestamp)
+                , "Must wait cooldown period");
             if(is_buy)
             {
                 lastTx[to] = block.timestamp;
@@ -816,7 +817,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         if(extra_fee)
         {
             uint256 extraFee = (amount * extra_fee_percent) / (10**(_feeDecimal + 2));
-            _donationFeeCollected += extraFee;
+            _marketingFeeCollected += extraFee;
             return extraFee;
         }
         uint256 marketingFee = (amount * _marketingFee[feeIndex]) / (10**(_feeDecimal + 2));
