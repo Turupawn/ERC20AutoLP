@@ -283,7 +283,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     mapping(address => bool) public blacklist;
     uint blocks_autoblacklist_active;
-    uint blacklist_until;
 
     mapping(address => bool) public whitelist;
 
