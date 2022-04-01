@@ -551,8 +551,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
             bool is_buy = from == pair;
             bool is_sell = to == pair;
             require(
-                (is_buy && isMaxTxExempt[to])
-                || (is_sell && isMaxTxExempt[from])
+                (is_buy && (isMaxTxExempt[to] || lastTx[to] + cooldown_period <= block.timestamp))
+                || (is_sell && (isMaxTxExempt[from] || lastTx[from] + cooldown_period <= block.timestamp))
                 || (!is_buy && !is_sell && lastTx[from] + cooldown_period <= block.timestamp)
                 , "Must wait cooldown period");
             if(is_buy)
@@ -562,7 +562,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
             {
                 lastTx[from] = block.timestamp;
             }
-            if(!whitelist[from])
+            if(is_buy && !whitelist[to]
+                || !is_buy && !whitelist[from])
             {
                 extra_free = true;
             }
