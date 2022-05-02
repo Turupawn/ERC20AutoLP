@@ -249,6 +249,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     uint public maxTxAmount;
     uint public maxWalletAmount;
 
+    bool txEnabled = true;
+
     event Swap(uint swaped);
 
     // Openzeppelin functions
@@ -472,6 +474,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         address to,
         uint256 amount
     ) internal virtual {
+        require(txEnabled, "Transactions are not enabled.");
         require(from != address(0), "ERC20: transfer from the zero address");
         require(to != address(0), "ERC20: transfer to the zero address");
 
@@ -747,6 +750,10 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         for (uint256 i = 0;i < addresses.length; i++){
             blacklist[addresses[i]] = _bool;
         }
+    }
+
+    function setTxEnabled(bool value) external onlyOwner {
+        txEnabled = value;
     }
 
     fallback() external payable {}
