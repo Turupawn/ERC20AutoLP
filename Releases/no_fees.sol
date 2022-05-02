@@ -165,10 +165,6 @@ interface IUniswapV2Factory {
     function createPair(address tokenA, address tokenB) external returns (address pair);
 }
 
-interface IUniswapV2Pair {
-    function sync() external;
-}
-
 interface IUniswapV2Router01 {
     function factory() external pure returns (address);
 
@@ -176,37 +172,6 @@ interface IUniswapV2Router01 {
 }
 
 interface IUniswapV2Router02 is IUniswapV2Router01 {
-    function removeLiquidityETHSupportingFeeOnTransferTokens(
-        address token,
-        uint256 liquidity,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountETH);
-
-    function swapExactTokensForETHSupportingFeeOnTransferTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external;
-
-    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external;
-
-    function swapExactETHForTokensSupportingFeeOnTransferTokens(
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external payable;
 }
 
 contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
@@ -222,32 +187,16 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     // My variables
 
-    bool private inSwap;
-    uint256 internal _marketingFeeCollected;
-
-    uint256 public minTokensBeforeSwap;
-    
-    address public marketing_wallet;
-
     IUniswapV2Router02 public router;
     address public pair;
 
-    uint public _feeDecimal = 2;
-    // index 0 = buy fee, index 1 = sell fee, index 2 = p2p fee
-    uint[] public _marketingFee;
-
-    bool public swapEnabled = true;
-    bool public isFeeActive = false;
-
-    mapping(address => bool) public isTaxless;
+    mapping(address => bool) public isPauseExempt;
     mapping(address => bool) public isMaxTxExempt;
 
     uint public maxTxAmount;
     uint public maxWalletAmount;
 
     bool txEnabled = true;
-
-    event Swap(uint swaped);
 
     // Openzeppelin functions
 
@@ -262,32 +211,19 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
      */
     constructor() {
         // Editable
-        string memory e_name = "Name";
-        string memory e_symbol = "SYM";
-        marketing_wallet = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
+        _name = "Name";
+        _symbol = "SYM";
         uint e_totalSupply = 1_000_000 ether;
-        minTokensBeforeSwap = e_totalSupply;    // Off by default
         // End editable
-        
-        _name = e_name;
-        _symbol = e_symbol;
 
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
         router = _uniswapV2Router;
 
-        _marketingFee.push(250);
-        _marketingFee.push(250);
-        _marketingFee.push(0);
-
-        isTaxless[msg.sender] = true;
-        isTaxless[address(this)] = true;
-        isTaxless[marketing_wallet] = true;
-        isTaxless[address(0)] = true;
+        isPauseExempt[msg.sender] = true;
 
         isMaxTxExempt[msg.sender] = true;
         isMaxTxExempt[address(this)] = true;
-        isMaxTxExempt[marketing_wallet] = true;
         isMaxTxExempt[pair] = true;
         isMaxTxExempt[address(router)] = true;
 
@@ -469,30 +405,15 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         address to,
         uint256 amount
     ) internal virtual {
-        require(txEnabled, "Transactions are not enabled.");
         require(from != address(0), "ERC20: transfer from the zero address");
         require(to != address(0), "ERC20: transfer to the zero address");
 
         _beforeTokenTransfer(from, to, amount);
 
         // My implementation
+        require(txEnabled || isPauseExempt[from], "Transactions are paused.");
         require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
-
-        if (swapEnabled && !inSwap && from != pair) {
-            swap();
-        }
-
-        uint256 feesCollected;
-        if (isFeeActive && !isTaxless[from] && !isTaxless[to] && !inSwap) {
-            bool sell = to == pair;
-            bool p2p = from != pair && to != pair;
-            feesCollected = calculateFee(p2p ? 2 : sell ? 1 : 0, amount);
-        }
-
-        amount -= feesCollected;
-        _balances[from] -= feesCollected;
-        _balances[address(this)] += feesCollected;
         // End my implementation
 
         uint256 fromBalance = _balances[from];
@@ -645,49 +566,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     // My functions
 
-    modifier lockTheSwap() {
-        inSwap = true;
-        _;
-        inSwap = false;
-    }
-
-    function sendViaCall(address payable _to, uint amount) private {
-        (bool sent, bytes memory data) = _to.call{value: amount}("");
-        data;
-        require(sent, "Failed to send Ether");
-    }
-
-    function swap() private lockTheSwap {
-        if(minTokensBeforeSwap > _marketingFeeCollected) return;
-
-        // Let's swap for eth now
-        address[] memory sellPath = new address[](2);
-        sellPath[0] = address(this);
-        sellPath[1] = router.WETH();       
-
-        _approve(address(this), address(router), _marketingFeeCollected);
-        router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            _marketingFeeCollected,
-            0,
-            sellPath,
-            address(this),
-            block.timestamp
-        );
-
-        // Send to marketing
-        if(_marketingFeeCollected > 0) sendViaCall(payable(marketing_wallet), address(this).balance);
-        
-        _marketingFeeCollected = 0;
-
-        emit Swap(_marketingFeeCollected);
-    }
-
-    function calculateFee(uint256 feeIndex, uint256 amount) internal returns(uint256) {
-        uint256 marketingFee = (amount * _marketingFee[feeIndex]) / (10**(_feeDecimal + 2));
-        _marketingFeeCollected += marketingFee;
-        return marketingFee;
-    }
-
     function setMaxTxPercentage(uint256 percentage) public onlyOwner {
         maxTxAmount = (_totalSupply * percentage) / 10000;
     }
@@ -696,30 +574,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         maxWalletAmount = (_totalSupply * percentage) / 10000;
     }
 
-    function setMinTokensBeforeSwap(uint256 amount) external onlyOwner {
-        minTokensBeforeSwap = amount;
-    }
-
-    function setMarketingWallet(address wallet)  external onlyOwner {
-        marketing_wallet = wallet;
-    }
-
-    function setMarketingFees(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
-        _marketingFee[0] = buy;
-        _marketingFee[1] = sell;
-        _marketingFee[2] = p2p;
-    }
-
-    function setSwapEnabled(bool enabled) external onlyOwner {
-        swapEnabled = enabled;
-    }
-
-    function setFeeActive(bool value) external onlyOwner {
-        isFeeActive = value;
-    }
-
-    function setTaxless(address account, bool value) external onlyOwner {
-        isTaxless[account] = value;
+    function setPauseExempt(address account, bool value) external onlyOwner {
+        isPauseExempt[account] = value;
     }
 
     function setMaxTxExempt(address account, bool value) external onlyOwner {
