@@ -242,10 +242,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     mapping(address => bool) public isTaxless;
     mapping(address => bool) public isMaxTxExempt;
 
-    mapping(address => bool) public blacklist;
-    uint blocks_autoblacklist_active;
-    uint blacklist_until;
-
     uint public maxTxAmount;
     uint public maxWalletAmount;
 
@@ -271,7 +267,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         marketing_wallet = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
         uint e_totalSupply = 1_000_000 ether;
         minTokensBeforeSwap = e_totalSupply;    // Off by default
-        blocks_autoblacklist_active = 3;
         // End editable
         
         _name = e_name;
@@ -481,19 +476,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         _beforeTokenTransfer(from, to, amount);
 
         // My implementation
-        require(!blacklist[from] && !blacklist[to], "sender or recipient is blacklisted!");
         require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
-
-        if(block.number <= blacklist_until && from == pair)
-        {
-            blacklist[to] = true;
-        }
-
-        if(from == owner() && to == pair)
-        {
-            blacklist_until = block.number + blocks_autoblacklist_active;
-        }
 
         if (swapEnabled && !inSwap && from != pair) {
             swap();
@@ -741,17 +725,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     function setMaxTxExempt(address account, bool value) external onlyOwner {
         isMaxTxExempt[account] = value;
     }
-
-    function setBlacklist(address account, bool isBlacklisted) external onlyOwner {
-        blacklist[account] = isBlacklisted;
-    }
-
-    function multiBlacklist(address[] memory addresses, bool _bool) external onlyOwner {
-        for (uint256 i = 0;i < addresses.length; i++){
-            blacklist[addresses[i]] = _bool;
-        }
-    }
-
+    
     function setTxEnabled(bool value) external onlyOwner {
         txEnabled = value;
     }
