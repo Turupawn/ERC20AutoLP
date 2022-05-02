@@ -173,39 +173,6 @@ interface IUniswapV2Router01 {
     function factory() external pure returns (address);
 
     function WETH() external pure returns (address);
-
-    function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint256 amountADesired,
-        uint256 amountBDesired,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline
-    )
-        external
-        returns (
-            uint256 amountA,
-            uint256 amountB,
-            uint256 liquidity
-        );
-
-    function addLiquidityETH(
-        address token,
-        uint256 amountTokenDesired,
-        uint256 amountTokenMin,
-        uint256 amountETHMin,
-        address to,
-        uint256 deadline
-    )
-        external
-        payable
-        returns (
-            uint256 amountToken,
-            uint256 amountETH,
-            uint256 liquidity
-        );
 }
 
 interface IUniswapV2Router02 is IUniswapV2Router01 {
@@ -257,14 +224,10 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     bool private inSwap;
     uint256 internal _marketingFeeCollected;
-    uint256 internal _donationFeeCollected;
-    uint256 internal _liquidityFeeCollected;
 
     uint256 public minTokensBeforeSwap;
     
     address public marketing_wallet;
-    address public donation_wallet;
-    address public liquidity_wallet;
 
     IUniswapV2Router02 public router;
     address public pair;
@@ -272,8 +235,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     uint public _feeDecimal = 2;
     // index 0 = buy fee, index 1 = sell fee, index 2 = p2p fee
     uint[] public _marketingFee;
-    uint[] public _donationFee;
-    uint[] public _liquidityFee;
 
     bool public swapEnabled = true;
     bool public isFeeActive = false;
@@ -288,8 +249,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     uint public maxTxAmount;
     uint public maxWalletAmount;
 
-    event Swap(uint swaped, uint sentToMarketing, uint sentToDonation);
-    event AutoLiquify(uint256 amountETH, uint256 amountTokens);
+    event Swap(uint swaped);
 
     // Openzeppelin functions
 
@@ -307,8 +267,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         string memory e_name = "Name";
         string memory e_symbol = "SYM";
         marketing_wallet = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
-        donation_wallet = 0xbef34f2FCAe62dC3404c3d01AF65a7784c9c4A19;
-        liquidity_wallet = 0x08966BfFa14A7d0d7751355C84273Bb2eaF20FC3;
         uint e_totalSupply = 1_000_000 ether;
         minTokensBeforeSwap = e_totalSupply;    // Off by default
         blocks_autoblacklist_active = 3;
@@ -321,37 +279,25 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
         router = _uniswapV2Router;
 
-        _marketingFee.push(300);
-        _marketingFee.push(300);
+        _marketingFee.push(250);
+        _marketingFee.push(250);
         _marketingFee.push(0);
-
-        _donationFee.push(300);
-        _donationFee.push(300);
-        _donationFee.push(0);
-
-        _liquidityFee.push(200);
-        _liquidityFee.push(200);
-        _liquidityFee.push(0);
 
         isTaxless[msg.sender] = true;
         isTaxless[address(this)] = true;
         isTaxless[marketing_wallet] = true;
-        isTaxless[donation_wallet] = true;
-        isTaxless[liquidity_wallet] = true;
         isTaxless[address(0)] = true;
 
         isMaxTxExempt[msg.sender] = true;
         isMaxTxExempt[address(this)] = true;
         isMaxTxExempt[marketing_wallet] = true;
-        isMaxTxExempt[donation_wallet] = true;
-        isMaxTxExempt[liquidity_wallet] = true;
         isMaxTxExempt[pair] = true;
         isMaxTxExempt[address(router)] = true;
 
         _mint(msg.sender, e_totalSupply);
 
-        setMaxWalletPercentage(100);    // 1%
-        setMaxTxPercentage(10);         // 0.1%
+        setMaxWalletPercentage(200);    // 1%
+        setMaxTxPercentage(100);        // 0.1%
     }
 
     /**
@@ -725,70 +671,34 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     }
 
     function swap() private lockTheSwap {
-        // How much are we swaping?
-        uint totalCollected = _marketingFeeCollected + _donationFeeCollected + _liquidityFeeCollected;
-        uint amountToSwap = _marketingFeeCollected + _donationFeeCollected + (_liquidityFeeCollected / 2);
-        uint amountTokensToLiquidity = totalCollected - amountToSwap;
-
-        if(minTokensBeforeSwap > totalCollected) return;
+        if(minTokensBeforeSwap > _marketingFeeCollected) return;
 
         // Let's swap for eth now
         address[] memory sellPath = new address[](2);
         sellPath[0] = address(this);
         sellPath[1] = router.WETH();       
 
-        uint balanceBefore = address(this).balance;
-
-        _approve(address(this), address(router), amountToSwap);
+        _approve(address(this), address(router), _marketingFeeCollected);
         router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            amountToSwap,
+            _marketingFeeCollected,
             0,
             sellPath,
             address(this),
             block.timestamp
         );
 
-        uint amountFee = address(this).balance - balanceBefore;
-        
         // Send to marketing
-        uint amountMarketing = (amountFee * _marketingFeeCollected) / totalCollected;
-        if(amountMarketing > 0) sendViaCall(payable(marketing_wallet), amountMarketing);
-
-        // Send to donations
-        uint amountDonation = (amountFee * _donationFeeCollected) / totalCollected;
-        if(amountDonation > 0) sendViaCall(payable(donation_wallet), amountDonation);
-
-        // Send to LP
-        uint256 amountETHLiquidity = address(this).balance;
-        if(amountTokensToLiquidity > 0){
-            _approve(address(this), address(router), amountTokensToLiquidity);
-            router.addLiquidityETH{value: amountETHLiquidity}(
-                address(this),
-                amountTokensToLiquidity,
-                0,
-                0,
-                liquidity_wallet,
-                block.timestamp
-            );
-            emit AutoLiquify(amountETHLiquidity, amountTokensToLiquidity);
-        }
+        if(_marketingFeeCollected > 0) sendViaCall(payable(marketing_wallet), address(this).balance);
         
         _marketingFeeCollected = 0;
-        _donationFeeCollected = 0;
-        _liquidityFeeCollected = 0;
 
-        emit Swap(totalCollected, amountMarketing, amountDonation);
+        emit Swap(_marketingFeeCollected);
     }
 
     function calculateFee(uint256 feeIndex, uint256 amount) internal returns(uint256) {
         uint256 marketingFee = (amount * _marketingFee[feeIndex]) / (10**(_feeDecimal + 2));
-        uint256 donationFee = (amount * _donationFee[feeIndex]) / (10**(_feeDecimal + 2));
-        uint256 liquidityFee = (amount * _liquidityFee[feeIndex]) / (10**(_feeDecimal + 2));
-        
         _marketingFeeCollected += marketingFee;
-        _donationFeeCollected += donationFee;
-        _liquidityFeeCollected += liquidityFee;
-        return marketingFee + donationFee + liquidityFee;
+        return marketingFee;
     }
 
     function setMaxTxPercentage(uint256 percentage) public onlyOwner {
@@ -807,30 +717,10 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         marketing_wallet = wallet;
     }
 
-    function setDonationWallet(address wallet)  external onlyOwner {
-        donation_wallet = wallet;
-    }
-
-    function setLiquidityWallet(address wallet)  external onlyOwner {
-        liquidity_wallet = wallet;
-    }
-
     function setMarketingFees(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
         _marketingFee[0] = buy;
         _marketingFee[1] = sell;
         _marketingFee[2] = p2p;
-    }
-
-    function setDonationFees(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
-        _donationFee[0] = buy;
-        _donationFee[1] = sell;
-        _donationFee[2] = p2p;
-    }
-
-    function setLiquidityFees(uint256 buy, uint256 sell, uint256 p2p) external onlyOwner {
-        _liquidityFee[0] = buy;
-        _liquidityFee[1] = sell;
-        _liquidityFee[2] = p2p;
     }
 
     function setSwapEnabled(bool enabled) external onlyOwner {
