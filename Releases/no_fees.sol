@@ -582,7 +582,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isMaxTxExempt[account] = value;
     }
     
-    function setTxEnabled(bool value) external onlyOwner {
+    function setPause(bool value) external onlyOwner {
         txEnabled = value;
     }
 
