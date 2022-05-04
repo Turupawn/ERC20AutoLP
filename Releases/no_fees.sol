@@ -196,7 +196,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     uint public maxTxAmount;
     uint public maxWalletAmount;
 
-    bool isPaused = true;
+    bool isPaused;
 
     // Openzeppelin functions
 
@@ -214,6 +214,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         _name = "Name";
         _symbol = "SYM";
         uint e_totalSupply = 1_000_000 ether;
+        isPaused = true;
         // End editable
 
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
