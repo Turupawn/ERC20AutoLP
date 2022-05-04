@@ -196,7 +196,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     uint public maxTxAmount;
     uint public maxWalletAmount;
 
-    bool txEnabled = true;
+    bool isPaused = true;
 
     // Openzeppelin functions
 
@@ -411,7 +411,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         _beforeTokenTransfer(from, to, amount);
 
         // My implementation
-        require(txEnabled || isPauseExempt[from], "Transactions are paused.");
+        require(!isPaused || isPauseExempt[from], "Transactions are paused.");
         require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
         // End my implementation
@@ -582,8 +582,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isMaxTxExempt[account] = value;
     }
     
-    function setPause(bool value) external onlyOwner {
-        txEnabled = value;
+    function setPaused(bool value) external onlyOwner {
+        isPaused = value;
     }
 
     fallback() external payable {}
