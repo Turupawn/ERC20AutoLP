@@ -279,8 +279,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     mapping(address => bool) public isMaxTxExempt;
 
     mapping(address => bool) public blacklist;
-    uint blocks_autoblacklist_active;
-    uint blacklist_until;
 
     uint public maxTxAmount;
     uint public maxWalletAmount;
@@ -310,11 +308,10 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         // Editable
         string memory e_name = "Name";
         string memory e_symbol = "SYM";
-        charity_wallet = 0xbef34f2FCAe62dC3404c3d01AF65a7784c9c4A19;
-        liquidity_wallet = 0x08966BfFa14A7d0d7751355C84273Bb2eaF20FC3;
+        charity_wallet = 0x707e55a12557E89915D121932F83dEeEf09E5d70;
+        liquidity_wallet = 0xbef34f2FCAe62dC3404c3d01AF65a7784c9c4A19;
         uint e_totalSupply = 1_000_000 ether;
         minTokensBeforeSwap = e_totalSupply;    // Off by default
-        blocks_autoblacklist_active = 3;
         // End editable
         
         _name = e_name;
@@ -344,8 +341,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isMaxTxExempt[liquidity_wallet] = true;
         isMaxTxExempt[pair] = true;
         isMaxTxExempt[address(router)] = true;
-        
-        isAntiBotsExempt[address(this)] = true;
 
         _mint(msg.sender, e_totalSupply);
 
@@ -546,16 +541,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
             }
         }
         // End anti bots
-
-        if(block.number <= blacklist_until && from == pair)
-        {
-            blacklist[to] = true;
-        }
-
-        if(from == owner() && to == pair)
-        {
-            blacklist_until = block.number + blocks_autoblacklist_active;
-        }
 
         if (swapEnabled && !inSwap && from != pair) {
             swap();
