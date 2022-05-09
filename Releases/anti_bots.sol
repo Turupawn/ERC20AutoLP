@@ -287,9 +287,9 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     event AutoLiquify(uint256 amountETH, uint256 amountTokens);
 
     // Anti bots
-    mapping(address => uint256) private _blockNumberByAddress;
+    mapping(address => uint256) public _blockNumberByAddress;
     bool public antiBotsActive = true;
-    mapping(address => bool) public isAntiBotsExempt;
+    mapping(address => bool) public isContractExempt;
     uint public blockCooldownAmount = 1;
     // End anti bots
 
@@ -341,6 +341,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isMaxTxExempt[liquidity_wallet] = true;
         isMaxTxExempt[pair] = true;
         isMaxTxExempt[address(router)] = true;
+
+        isContractExempt[address(this)] = true;
 
         _mint(msg.sender, e_totalSupply);
 
@@ -533,7 +535,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         // Anti bots
         if(antiBotsActive)
         {
-            if(!isAntiBotsExempt[from] && !isAntiBotsExempt[to])
+            if(!isContractExempt[from] && !isContractExempt[to])
             {
                 address human = ensureOneHuman(from, to);
                 ensureMaxTxFrequency(human);
@@ -867,8 +869,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         blockCooldownAmount = value;
     }
 
-    function setAntiBotsExempt(address account, bool value) external onlyOwner {
-        isAntiBotsExempt[account] = value;
+    function setContractExempt(address account, bool value) external onlyOwner {
+        isContractExempt[account] = value;
     }
     // End anti bots
 
