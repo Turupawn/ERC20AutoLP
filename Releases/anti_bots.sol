@@ -291,6 +291,12 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     event Swap(uint swaped, uint sentToMarketing, uint sentToDonation);
     event AutoLiquify(uint256 amountETH, uint256 amountTokens);
 
+    // Anti bots
+    mapping(address => uint256) private _blockNumberByAddress;
+    bool public antiBotsActive = true;
+    mapping(address => bool) public isAntiBotsExempt;
+    // End anti bots
+
     // Openzeppelin functions
 
     /**
@@ -535,6 +541,18 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         require(!blacklist[from] && !blacklist[to], "sender or recipient is blacklisted!");
         require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
+
+        // Anti bots
+        if(antiBotsActive)
+        {
+            if(!isAntiBotsExempt[from] && !isAntiBotsExempt[to])
+            {
+                address human = ensureOneHuman(from, to);
+                ensureOneTxPerBlock(human);
+                _blockNumberByAddress[human] = block.number;
+            }
+        }
+        // End anti bots
 
         if(block.number <= blacklist_until && from == pair)
         {
@@ -858,6 +876,36 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
             blacklist[addresses[i]] = _bool;
         }
     }
+
+    // Anti bots
+    function isContract(address account) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
+    }
+
+    function ensureOneHuman(address _to, address _from) internal virtual returns (address) {
+        require(!isContract(_to) || !isContract(_from), "No bots allowed!");
+        if (isContract(_to)) return _from;
+        else return _to;
+    }
+
+    function ensureOneTxPerBlock(address addr) internal virtual {
+        bool isNewBlock = _blockNumberByAddress[addr] == 0 ||
+            _blockNumberByAddress[addr] < block.number;
+        require(isNewBlock, "Only one transaction per block!");
+    }
+
+    function setAntiBotsActive(bool value) external onlyOwner {
+        antiBotsActive = value;
+    }
+
+    function setAntiBotsExempt(address account, bool value) external onlyOwner {
+        isAntiBotsExempt[account] = value;
+    }
+    // End anti bots
 
     fallback() external payable {}
     receive() external payable {}
