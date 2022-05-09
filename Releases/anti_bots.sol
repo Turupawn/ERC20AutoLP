@@ -344,6 +344,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isMaxTxExempt[liquidity_wallet] = true;
         isMaxTxExempt[pair] = true;
         isMaxTxExempt[address(router)] = true;
+        
+        isAntiBotsExempt[address(this)] = true;
 
         _mint(msg.sender, e_totalSupply);
 
