@@ -292,6 +292,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     mapping(address => uint256) private _blockNumberByAddress;
     bool public antiBotsActive = true;
     mapping(address => bool) public isAntiBotsExempt;
+    uint public blockCooldownAmount = 1;
     // End anti bots
 
     // Openzeppelin functions
@@ -538,7 +539,7 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
             if(!isAntiBotsExempt[from] && !isAntiBotsExempt[to])
             {
                 address human = ensureOneHuman(from, to);
-                ensureOneTxPerBlock(human);
+                ensureMaxTxFrequency(human);
                 _blockNumberByAddress[human] = block.number;
             }
         }
@@ -865,14 +866,18 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         else return _to;
     }
 
-    function ensureOneTxPerBlock(address addr) internal virtual {
-        bool isNewBlock = _blockNumberByAddress[addr] == 0 ||
-            _blockNumberByAddress[addr] < block.number;
-        require(isNewBlock, "Only one transaction per block!");
+    function ensureMaxTxFrequency(address addr) internal virtual {
+        bool isAllowed = _blockNumberByAddress[addr] == 0 ||
+            ((_blockNumberByAddress[addr] + 1) < (block.number + blockCooldownAmount));
+        require(isAllowed, "Only one transaction per block!");
     }
 
     function setAntiBotsActive(bool value) external onlyOwner {
         antiBotsActive = value;
+    }
+
+    function setBlockCooldown(uint value) external onlyOwner {
+        blockCooldownAmount = value;
     }
 
     function setAntiBotsExempt(address account, bool value) external onlyOwner {
