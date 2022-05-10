@@ -198,6 +198,13 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     bool isPaused;
 
+    // Anti bots
+    mapping(address => uint256) public _blockNumberByAddress;
+    bool public antiBotsActive = true;
+    mapping(address => bool) public isContractExempt;
+    uint public blockCooldownAmount = 1;
+    // End anti bots
+
     // Openzeppelin functions
 
     /**
@@ -415,6 +422,18 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         require(!isPaused || isPauseExempt[from], "Transactions are paused.");
         require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
+
+        // Anti bots
+        if(antiBotsActive)
+        {
+            if(!isContractExempt[from] && !isContractExempt[to])
+            {
+                address human = ensureOneHuman(from, to);
+                ensureMaxTxFrequency(human);
+                _blockNumberByAddress[human] = block.number;
+            }
+        }
+        // End anti bots
         // End my implementation
 
         uint256 fromBalance = _balances[from];
@@ -587,6 +606,40 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isPaused = value;
     }
 
+    // Anti bots
+    function isContract(address account) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
+    }
+
+    function ensureOneHuman(address _to, address _from) internal virtual returns (address) {
+        require(!isContract(_to) || !isContract(_from), "No bots allowed!");
+        if (isContract(_to)) return _from;
+        else return _to;
+    }
+
+    function ensureMaxTxFrequency(address addr) internal virtual {
+        bool isAllowed = _blockNumberByAddress[addr] == 0 ||
+            ((_blockNumberByAddress[addr] + blockCooldownAmount) < (block.number + 1));
+        require(isAllowed, "Max tx frequency exceeded!");
+    }
+
+    function setAntiBotsActive(bool value) external onlyOwner {
+        antiBotsActive = value;
+    }
+
+    function setBlockCooldown(uint value) external onlyOwner {
+        blockCooldownAmount = value;
+    }
+
+    function setContractExempt(address account, bool value) external onlyOwner {
+        isContractExempt[account] = value;
+    }
+    // End anti bots
+    
     fallback() external payable {}
     receive() external payable {}
 }
