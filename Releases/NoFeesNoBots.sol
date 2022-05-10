@@ -234,6 +234,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isMaxTxExempt[address(this)] = true;
         isMaxTxExempt[pair] = true;
         isMaxTxExempt[address(router)] = true;
+        
+        isContractExempt[address(this)] = true;
 
         _mint(msg.sender, e_totalSupply);
 
