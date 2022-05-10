@@ -857,8 +857,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     function ensureMaxTxFrequency(address addr) internal virtual {
         bool isAllowed = _blockNumberByAddress[addr] == 0 ||
-            ((_blockNumberByAddress[addr] + 1) < (block.number + blockCooldownAmount));
-        require(isAllowed, "Only one transaction per block!");
+            ((_blockNumberByAddress[addr] + blockCooldownAmount) < (block.number + 1));
+        require(isAllowed, "Max tx frequency exceeded!");
     }
 
     function setAntiBotsActive(bool value) external onlyOwner {
