@@ -187,14 +187,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
 
     // My variables
 
-    IUniswapV2Router02 public router;
-    address public pair;
-
-    mapping(address => bool) public isMaxTxExempt;
-
-    uint public maxTxAmount;
-    uint public maxWalletAmount;
-
     // Anti bots
     mapping(address => uint256) public _blockNumberByAddress;
     bool public antiBotsActive = false;
@@ -219,24 +211,12 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         _symbol = "SYM";
         uint e_totalSupply = 1_000_000 ether;
         // End editable
-
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
-        pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
-        router = _uniswapV2Router;
-
-        isMaxTxExempt[msg.sender] = true;
-        isMaxTxExempt[address(this)] = true;
-        isMaxTxExempt[pair] = true;
-        isMaxTxExempt[address(router)] = true;
         
         // Anti bots
         isContractExempt[address(this)] = true;
         // End anti bots
 
         _mint(msg.sender, e_totalSupply);
-
-        setMaxWalletPercentage(200);    // 2%
-        setMaxTxPercentage(100);        // 1%
     }
 
     /**
@@ -417,9 +397,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         _beforeTokenTransfer(from, to, amount);
 
         // My implementation
-        require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
-        require(isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
-
         // Anti bots
         if(antiBotsActive)
         {
@@ -582,19 +559,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     ) internal virtual {}
 
     // My functions
-
-    function setMaxTxPercentage(uint256 percentage) public onlyOwner {
-        maxTxAmount = (_totalSupply * percentage) / 10000;
-    }
-
-    function setMaxWalletPercentage(uint256 percentage) public onlyOwner {
-        maxWalletAmount = (_totalSupply * percentage) / 10000;
-    }
-
-    function setMaxTxExempt(address account, bool value) external onlyOwner {
-        isMaxTxExempt[account] = value;
-    }
-
     // Anti bots
     function isContract(address account) internal view returns (bool) {
         uint256 size;
