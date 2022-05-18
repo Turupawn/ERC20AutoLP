@@ -592,7 +592,4 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         isContractExempt[account] = value;
     }
     // End anti bots
-    
-    fallback() external payable {}
-    receive() external payable {}
 }
