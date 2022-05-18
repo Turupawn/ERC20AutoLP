@@ -190,17 +190,14 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
     IUniswapV2Router02 public router;
     address public pair;
 
-    mapping(address => bool) public isPauseExempt;
     mapping(address => bool) public isMaxTxExempt;
 
     uint public maxTxAmount;
     uint public maxWalletAmount;
 
-    bool isPaused;
-
     // Anti bots
     mapping(address => uint256) public _blockNumberByAddress;
-    bool public antiBotsActive = true;
+    bool public antiBotsActive = false;
     mapping(address => bool) public isContractExempt;
     uint public blockCooldownAmount = 1;
     // End anti bots
@@ -221,14 +218,11 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         _name = "Name";
         _symbol = "SYM";
         uint e_totalSupply = 1_000_000 ether;
-        isPaused = true;
         // End editable
 
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
         pair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(address(this), _uniswapV2Router.WETH());
         router = _uniswapV2Router;
-
-        isPauseExempt[msg.sender] = true;
 
         isMaxTxExempt[msg.sender] = true;
         isMaxTxExempt[address(this)] = true;
@@ -423,7 +417,6 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         _beforeTokenTransfer(from, to, amount);
 
         // My implementation
-        require(!isPaused || isPauseExempt[from], "Transactions are paused.");
         require(isMaxTxExempt[from] || amount <= maxTxAmount, "Transfer exceeds limit!");
         require(isMaxTxExempt[to] || balanceOf(to) + amount <= maxWalletAmount, "Max Wallet Limit Exceeds!");
 
@@ -598,16 +591,8 @@ contract MyERC20 is Context, IERC20, IERC20Metadata, Ownable {
         maxWalletAmount = (_totalSupply * percentage) / 10000;
     }
 
-    function setPauseExempt(address account, bool value) external onlyOwner {
-        isPauseExempt[account] = value;
-    }
-
     function setMaxTxExempt(address account, bool value) external onlyOwner {
         isMaxTxExempt[account] = value;
-    }
-    
-    function setPaused(bool value) external onlyOwner {
-        isPaused = value;
     }
 
     // Anti bots
